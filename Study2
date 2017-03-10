@@ -1,0 +1,1508 @@
+/*--------------------------------------------------------------------------------------------*/
+/*------------------------------------------------------------------------------------20160831*/
+目前Filesystem, 開始位置 32M 處.
+partition: 單位 = 磁區 之於 1 * 512 = 512 位元組
+所用裝置 開機	開始	結束         區塊   識別號  系統
+/dev/sdc1	65536	7744511     3839488   83  Linux   <== 0x10000  (32M)
+
+/*--------------------------------------------------------------------------------------------*/
+目前 ADLINK_YOCTO 使用手冊
+1. 抓取 repo 放在 ~/bin/ 中
+	curl http://commondatastorage.googleapis.com/git-repo-downloads/repo > ~/bin/repo
+2. 修改 下載路徑
+	repo init -u git://git.freescale.com/imx/fsl-arm-yocto-bsp.git -b imx-4.1.15-1.0.0_ga
+	.repo/manifests/default.xml
+	repo sync
+3. 設定DISTRO, MACHINE, 及建立building資料夾
+	DISTRO=rtx-adlink-x11 MACHINE=rtx-adlink-imx6q source fsl-setup-release.sh -b build-adlink	
+4. building uboot
+	bitbake virtual/bootloader
+5. building kernel
+	bitbake virtual/kernel
+6. building qt filesystem
+	bitbake rtx-image-adlink
+7. 輸出 image 位置
+	build-adlink/tmp/deploy/images/rtx-adlink-imx6q	
+8. 輸出 image 檔名
+	u-boot.imx
+	uImage-rtx-adlink-imx6q.bin
+	uImage-imx6q-rtx-pitx.dtb
+	modules-rtx-adlink-imx6q.tgz
+	
+/*------------------------------------------------------------------------------------20161221*/
+安裝 ADLINK 系統 ( disc = /dev/sdc ), kernel 4.1.15, Uboot 2015.04, FileSystem Yocto imx 4.1.15
+	1. clean all
+		sudo dd if=/dev/zero of=/dev/sdc bs=1M count=64		(p0 = 32M)
+	2. uboot 
+		sudo dd if=u-boot-adlink-2015.04-r0.imx of=/dev/sdc bs=1024 seek=1
+	3. kernel
+		sudo dd if=uImage--4.1.15-r0-imx6dl-adlink-abb-20161220152735.bin of=/dev/sdc bs=1024 seek=13312
+	4. dtb
+		sudo dd if=uImage--4.1.15-r0-imx6dl-rtx-adlink-20161220152735.dtb of=/dev/sdc bs=1024 seek=12800
+	5. fdisk /dev/sdc	- "131072"(64M) - "+3200M"
+		所用裝置 開機      開始         結束      區塊   識別號  系統
+		/dev/sdc1           131072     6684671     3276800   83  Linux
+	6. sudo mkfs.ext4 -j -L Yocto /dev/sdc1
+	7. mount -t ext4 /dev/sdc1 /mnt  (skip,system auto mount)
+	8. filesystem ( /dev/sdc1 131072 "0x20000" "64M" )
+		sudo tar --numeric-owner -pjxvf rtx-image-adlink-imx6dl-adlink-abb-20161220152735.rootfs.tar.bz2 -C /media/rtx-3110/Yocto/
+	9. kernel module (skip)
+/*------------------------------------------------------------------------------------20160905*/
+ADLINK PCBA_FUNCTION_TEST Debug
+1. HDMI Audio Issue ( imx-hdmi-audio: HDMI Video is not ready! ..),	no sound!!
+	Device Drivers  --->  Graphics support  ---> Frame buffer Devices  ---> 
+		<*> Support for frame buffer devices  --->   [*]   Enable firmware EDID
+
+2. Disabling Issue (VGEN3, VGEN2, VGEN1, SWBST, SW4, usb_otg_vbus)
+	regulator-always-on;
+	enable-active-high;
+	- fix 
+		eth0 Issue (fec 2188000.ethernet eth0: Link is Up - 100Mbps/Full - flow control rx/tx ..)
+		alsa Issue (No state is present for card imx6qrtxpitxsgt)
+
+3. Bluetooth driver
+	cp ar3k, ath3k-1.fw /lib/firmware/
+	
+4. Bluetooth Issue (Can't init device hci0: Operation not possible due to RF-kill)
+   Wifi Issue (ifconfig: SIOCSIFFLAGS: Operation not possible due to RF-kill)
+   	rfkill list (list block status)
+	rfkill unblock all (can fix bluetooth, but wifi can't unblock hw status)
+	kernel configure - [*] Networking support  ---> < >   RF switch subsystem support (Don't select it)
+	 
+5. PICO uart Issue (UART1 hang up Issue )
+	mask RI ping (/* MX6QDL_PAD_EIM_EB3__UART1_RI_B			0x1b0b1		*/)
+	UART1_4/UART1_7 test Pass
+
+6. PFT_160906 (test complete)
+	Add PCBA test, Relibility test and Boot test.
+	
+/*------------------------------------------------------------------------------------20160905*/
+需要在下一次 : DISTRO=rtx-adlink-x11 MACHINE=rtx-adlink-imx6q source fsl-setup-release.sh -b build-adlink
+bitbake PATH :
+	export PATH="/home/rtx-3110/Work/ADATA_1/fsl-yocto-3/sources/poky/scripts:/home/rtx-3110/Work/ADATA_1/fsl-yocto-3/sources/poky/bitbake/bin:$PATH"
+	bitbake -c clean virtual/kernel; bitbake virtual/kernel
+
+
+/*------------------------------------------------------------------------------------20160907*/
+operating ranges of the i.MX 6Dual/6Quad processors :
+kernel 3.14.28, kernel 3.0.35
+1. 量測時, 透過切 userspace, freq, check VDD_ARM_IN -> VDD_ARM_CAP, VDD_SOC_IN -> VDD_SOC_CAP value
+	/sys/devices/system/cpu/cpu0/cpufreq/scaling_governor	(mode : userspace,interactive)
+	/sys/devices/system/cpu/cpu0/cpufreq/scaling_setspeed	(freq : 996000,792000,396000)
+2. imx6q.dtsi 或 cpu_op-mx6.c 設定電壓值
+3. uboot 2015.04 有切 ldo_bypass mode!
+4. kernel 3.14.28 version 記得打開
+	&cpu0 {
+		arm-supply = <&sw1a_reg>;
+		soc-supply = <&sw1c_reg>;
+	};
+	&i2c2 {....
+		pmic: pfuze100@08 {
+			compatible = "fsl,pfuze100";
+			reg = <0x08>;
+/*------------------------------------------------------------------------------------20160909*/
+PITX test adjust 整理
+(ltib + kernel 3.14.28 + uboot 2015.04) 
+1. HW_Test : I/O function test 
+	eth x 2 usb x 4, uart1, uart4, uart5, hdmi, lvds x 2, micphone, headphone, speaker x 2, 
+	can, rs422, rs485_rx, rs485_rx
+2. PITX_RE : Relibility
+	eth0, eth1, usb, sdcard, speaker, wifi, bluetooth, uart1, uart5, hdmi, lvds0, lvds1, 
+	rtc, gpio
+3. Stress : stress  ...
+4. ReBoot : 高低溫測試, 重複開機測試, 
+5. EMI : EMI test
+6. ESD : ESD test
+(ubuntu + kernel 3.14.28 + uboot 2015.04) 
+7. Demo : Demo
+8. loading : play video, gpu.
+9. mp : ubuntu mp test
+
+/*------------------------------------------------------------------------------------20160909*/
+Rebuild PICO system : ltib + linux-rtx 3.14.28(new) + uboot-rtx 2015.04(new)
+//20160415 version .. 後面結果Fail , 所以下面重新build置換到之前版本 //20160328
+1. 下載 PITX Ltib : git clone ssh://gitolite@git-server.rtx.org/LTIB/MX6_LinuxBSP.git
+2. uboot/kernel setting, config/platform/imx/defconfig.dev
+	CONFIG_SYSCFG_RTX_GIT_SERVER="git-server.rtx.org"
+	CONFIG_SYSCFG_KERNEL_GIT_REPOSITORY="Kernel/linux-rtx.git"
+	CONFIG_SYSCFG_UBOOT_GIT_REPOSITORY="U-Boot/u-boot-rtx.git"	
+	CONFIG_SYSCFG_KERNEL_GIT_BRANCH="remotes/origin/RTX_3.14.28"
+	CONFIG_SYSCFG_UBOOT_GIT_BRANCH="remotes/origin/RTX_2015.04"
+	CONFIG_SYSCFG_KERNEL_DTC_NAME="imx6q-rtx-pitx"	
+	CONFIG_PKG_KERNEL="kernel-rtx-git"
+	CONFIG_PKG_U_BOOT="u-boot-rtx-git"
+	CONFIG_PKG_U_BOOT_CONFIG_TYPE="rtx_pitx_mx6q_nanya1g_dtb_rtx_all_linux_defconfig"
+   config/platform/imx/main.lkc
+   	config SYSCFG_UBOOT_GIT_REPOSITORY
+   		default "U-Boot/u-boot-rtx.git"
+	config SYSCFG_UBOOT_GIT_BRANCH
+		default "remotes/origin/RTX_V2015.04"
+   	config SYSCFG_KERNEL_GIT_REPOSITORY
+   		default "Kernel/linux-rtx.git"
+   	config SYSCFG_KERNEL_GIT_BRANCH
+   		default "remotes/origin/RTX_3.14.28"
+	config PKG_U_BOOT_CONFIG_TYPE
+    		default "rtx_pitx_mx6q_nanya1g_dtb_rtx_all_linux_defconfig" if (PLATFORM = "imx6q" && BOARD_MX6Q_PITX )	
+3. ./ltib -c config  來修正上面問題!!
+	透過setting再重新設定一次!!
+	保留設定好的檔案 :
+		config/platform/imx/imx6_defconfig.dev  main.lkc
+		 config PKG_U_BOOT_CONFIG_TYPE default "rtx_pitx_mx6q_nanya1g_dtb_rtx_all_linux_defconfig"
+	變更 kernel-rtx-git.spec : (toolchain.lkc 與 kernel-rtx-git.spec 設定衝突..)
+		kernel-rtx-git.spec :
+			make $LOCV ARCH=$LINTARCH CROSS_COMPILE= HOSTCC="$BUILDCC" $SYSCFG_KTARG LOADADDR=${SYSCFG_KERNEL_MKIMAGE_ADDRESS}
+			變更 => CROSS_COMPILE=$TOOLCHAIN_PREFIX
+4. 建置環境 : (building error: failed dependencies)  --- 保留
+	a. rm -rf /opt/freescale/ltib (移除掉原先使用的ltib rpm 4.0.x版本)
+	b. ./ltib --hostck (tail -f host_config.log) (使用host rpm 4.1.x版本, check log)
+5. ltib build :
+	glib-2.36.4		skip
+	perl-5.22.1		skip
+	libcap-2.22		skip
+	rt5370sta-2.5.0.1	skip
+	vsftpd-2.0.5		skip
+	Python-2.7.3		copy(pkgs : db4/db5)
+	gobject-introspection	spec(Autoreqprov     : no)
+	udev-dev-175		spec(Autoreqprov     : no)
+	udev-175		spec(Autoreqprov     : no)
+	dbus-glib-100		spec(Autoreqprov     : no)
+	xf86-input-evdev-2.10.1	spec(Autoreqprov     : no)
+	cairo-1.12.14		spec(Autoreqprov     : no)
+	atk-2.10.0		spec(Autoreqprov     : no)
+	at-spi2-core-2.10.0	spec(Autoreqprov     : no)
+	at-spi2-atk-2.10.0	spec(Autoreqprov     : no)
+	harfbuzz-0.9.18		spec(Autoreqprov     : no)
+	pango-1.34.1		spec(Autoreqprov     : no)
+	gdk-pixbuf-2.28.2	spec(Autoreqprov     : no)/*------------------------------------------------------------------------------------20161024*/
+	gtk2-2.24.20		spec(Autoreqprov     : no)
+	libnotify-0.5.2		spec(Autoreqprov     : no)
+	polkit-0.112		spec(Autoreqprov     : no)
+	json-glib-0.14.2	spec(Autoreqprov     : no)
+	upower-0.9.21		spec(Autoreqprov     : no)
+	libsoup-2.40.3		spec(Autoreqprov     : no)
+	libidl-0.8.14		spec(Autoreqprov     : no)
+	ORBit2-2.14.19		spec(Autoreqprov     : no)
+	GConf-dbus-2.16.0	spec(Autoreqprov     : no)
+	gnome-session-3.2.1	spec(Autoreqprov     : no)
+	libglade-2.6.4		spec(Autoreqprov     : no)
+	pulseaudio-4.0		spec(Autoreqprov     : no)
+	libtheora-1.1.1		skip
+	libao-1.1.0		spec(--disable-esd)
+	graphviz-2.34.0		spec(Autoreqprov     : no)
+	mpg123-1.15.4		spec(Autoreqprov     : no)
+	gstreamer-core-0.10.36	spec(Autoreqprov     : no)
+	gst-plugins-base-0.10.36spec(Autoreqprov     : no)
+	gst-plugins-good-0.10.31spec(--disable-esd)
+	gst-plugins-bad-0.10.23	spec(Autoreqprov     : no)
+	gst-plugins-ugly-0.10.19spec(Autoreqprov     : no)
+	gst-plugins-farsight	spec(Autoreqprov     : no)
+	enchant-1.6.0		spec(Autoreqprov     : no)
+	MPlayer-1.3.0		skip
+	ois-1.3.0		skip
+	imx-test-3.14.28
+/*------------------------------------------------------------------------------------20160914*/
+Rebuild PICO system : ltib + linux-rtx 3.14.28(new) + uboot-rtx 2015.04(new) + gcc-4.9.3
+//version 20160328
+1. libcap-2.22 : 			
+	出事 : cp: omitting directory ..
+	修改.spec : cp -avrf $RPM_BUILD_ROOT/%{pfx}/lib64/* $RPM_BUILD_ROOT/%{pfx}/usr/lib/.      "去除前面*/"
+   glib2-2.36.0			spec(Autoreqprov     : no)
+   udev-175-1			spec(Autoreqprov     : no)
+   dbus-glib-0.100		spec(Autoreqprov     : no)
+   Mesa-10.0.5			spec(Autoreqprov     : no)
+   imx-gpu-viv-5.0.11.p4.5-hfp	spec(Autoreqprov     : no)
+   libXpresent-1.0.0		skip , rebuiild ok
+   xf86-input-evdev-2.10.1	spec(Autoreqprov     : no)
+   xserver-xorg-video-imx-viv-5.0.11.p4.4	skip
+   glu-9.0.0			spec(Autoreqprov     : no)
+   freeglut-2.8.1		spec(Autoreqprov     : no)
+   at-spi2-core-2.10.0		spec(Autoreqprov     : no)
+   at-spi2-atk-2.10.0
+   graphite2-1.2.3		CC mistake	skip  
+   gobject-introspection	CC mistake
+   automake-1.14-1
+   autoconf-2.69
+/*------------------------------------------------------------------------------------20160914*/
+Rebuild PICO system : ltib + linux-rtx 3.14.28(new) + uboot-rtx 2015.04(new) + gcc-4.9.3
+   udev-175-1			spec(Autoreqprov     : no)
+   Mesa-10.0.5			spec(Autoreqprov     : no)
+   imx-gpu-viv-5.0.11-4.5-hfp
+   libXpresent-1.0.0		skip , rebuiild ok
+   xf86-input-evdev-2.10.1
+   glu-9.0.0
+   freeglut-2.8.1
+   cairo-1.12.14		wayland pkgs 提前, skip
+   gobject-introspection	CC delete   
+   graphite2-1.2.3		CC delete
+     
+      
+/*------------------------------------------------------------------------------------20160914*/
+Build yocto 3.14.28 for gstreamer
+1. repo init -u ssh://gitolite@git-server.rtx.org/Yocto/NXP/fsl-arm-yocto-bsp.git -b RTX-3.14.28-1.1.0_ga
+2. MACHINE=imx6qsabresd source fsl-setup-release.sh -b build-x11 -e x11
+3. bitbake fsl-image-multimedia
+
+/*------------------------------------------------------------------------------------20160919*/
+PICO project :
+ubuntu : PITX/ ubuntu_rootfs + linux-imx-3.10.x uImage +  out/lib
+	1. gst-launch-1.0 playbin uri=file:///mnt/PFT_Cureent/001.MP4 video-sink="imxg2dvideosink framebuffer=/dev/fb0" &
+	2. /opt/viv_samples/es20/vv_launcher/vv_launcher
+	
+	1. cp -avrf 90-usb-sdcard-insert.rules /etc/udev/rules.d/
+	2. rm /etc/udev/rules.d/70-persistent-net.rules
+	3. add /home/rtx/PFT, /home/rtx/mp
+	4. modify /etc/init/tty1.conf
+
+/*------------------------------------------------------------------------------------20160920*/
+/*------------------------------------------------------------------------------------20161004*/
+make a Pico1_BSP.bin (uboot 2015.04 + kernel 3.14.28 + Ubuntu system), remake a gain
+
+cat /sys/class/mmc_host/mmc0/mmc0\:0001/boot_info
+
+echo 8 > /sys/class/mmc_host/mmc0/mmc0\:0001/boot_config
+	boot_partition:0x4a;
+  		BOOT_ACK:1 - Boot acknowledge sent during boot operation
+  		BOOT_PARTITION-ENABLE: 1 - Boot partition 1 enabled
+  
+echo 0 > /sys/class/mmc_host/mmc0/mmc0\:0001/boot_config
+	boot_partition:0x01;
+  		BOOT_ACK:0 - No boot acknowledge sent
+  		BOOT_PARTITION-ENABLE: 0 - Device not boot enabled
+
+mmcblk0 	: 0x000000 - 0x000400 	(size 1k - MBR)
+		: 0x0c0000 -		(start 786k - uboot parameter)
+		: 0xc00000 -		(start 12M - dtb data)
+		.....others..
+		
+mmcblk0boot0	: 0x000000 - 0x400000 	(size 4M)
+		  0x000400 - 0x060000 	( 1k-400k 有資料)
+
+1. MFG燒錄把要dd的Firmware先燒到EMMC中.
+2. 使用外卡開機,掛載8G隨身碟到/mnt/sda1中
+
+< DD /dev/mmcblk0 to PICO1_BSP.bin >
+3. dd if=/dev/mmcblk0 of=/mnt/sda1/PICO1_BSP.bin bs=512 count=2
+4. dd if=/dev/mmcblk0boot0 of=/mnt/sda1/PICO1_BSP.bin bs=1k seek=1 skip=1 count=1024 (input來源skip 1k, output目的seek 1k, size大小1M)
+5. dd if=/dev/mmcblk0 of=/mnt/sda1/PICO1_BSP.bin bs=1024 seek=786 skip=786 count=1024	(dd u-boot parameter size=1M)
+6. dd if=/dev/mmcblk0 of=/mnt/sda1/PICO1_BSP.bin bs=1M seek=1 skip=1 count=3500		(未來更改成 3200 , 3200M=3.5G)
+7. hexdump /mnt/sda1/PICO1_BSP.bin  -s 1024 -n 2048(only check 1k-3k byte)
+
+< DD /dev/zero to /dev/mmcblk0boot0 >
+8. echo 0 > /sys/block/mmcblk0boot0/force_roecho 0 > /sys/block/mmcblk0boot0/force_ro		(# Enable writes to /dev/mmcblk0boot0)
+9. dd if=/dev/zero of=/dev/mmcblk0boot0
+10. echo 1 > /sys/block/mmcblk0boot0/force_ro
+11. hexdump /dev/mmcblk0boot0
+
+< DD /dev/zero to /dev/mmcblk0 >
+12. dd if=/dev/zero of=/dev/mmcblk0
+13. hexdump /dev/mmcblk0
+
+< DD PICO1_BSP.bin to /dev/mmcblk0 >
+14. echo 0 > /sys/block/mmcblk0boot0/force_ro
+15. dd if=/mnt/sda1/PICO1_BSP.bin of=/dev/mmcblk0boot0 bs=1k seek=1 skip=1 count=1024 
+16. echo 1 > /sys/block/mmcblk0boot0/force_ro
+17. dd if=/mnt/sda1/PICO1_BSP.bin of=/dev/mmcblk0
+18. hexdump /dev/mmcblk0boot0
+19. hexdump /dev/mmcblk0
+
+原SIZE過大..變更方法..取代前面step 1,2
+	dd if=/dev/zero of=/dev/mmcblk0
+	fdisk /dev/mmcblk0 : limit size +3500M	(會改成+3200M, 3.5G)
+	dd if=imx6q-rtx-pitx-3.14.28.dtb of=/dev/mmcblk0 bs=512 seek=25600
+	dd if=uImage-3.14.28 of=/dev/mmcblk0 bs=512 seek=26624
+	mkfs.ext4 /dev/mmcblk0p1
+	mount /dev/mmcblk0p1 /mnt/mmcblk0p1/
+	tar -pjxvf ubuntu-pico2.tar.bz -C /mnt/mmcblk0p1/
+	重新開機確認OK!!
+
+/*------------------------------------------------------------------------------------20160920*/
+ADLINK : CPU imx6 Dual-lite , 
+WrappingMachine : Mask Emmc version Check. What day want to make it ?
+PICO : Ubuntu system + new PCBA_TEST
+
+/*------------------------------------------------------------------------------------20160920*/
+安裝 PICO 系統 ( disc = /dev/sdc ), kernel-rtx 3.14.28, Uboot-rtx 2015.04, Ubuntu 14.04.3 LTS 
+1. uboot 位置
+	sudo dd if=u-boot.imx of=/dev/sdc bs=512 seek=2	
+2. uboot parameter
+	sudo dd if=/dev/zero of=/dev/sdc bs=512 seek=24576 count=10
+3. kernel 位置
+	sudo dd if=uImage of=/dev/sdc bs=512 seek=26624
+4. devices tree
+	sudo dd if=imx6q-rtx-pitx.dtb of=/dev/sdc bs=512 seek=25600
+5. filesystem ( /dev/sdc1 131072 "0x20000" "64M" )
+	sudo tar -pjxvf ubuntu_mp3.tar.bz -C /media/rtx-3110/ubuntu/
+6. kernel module
+	sudo cp -avrf lib /media/rtx-3110/ubuntu/
+7. depmod 
+
+/*------------------------------------------------------------------------------------20160921*/
+Wrapping Machine : Release Emmc unrecognised patch, Init lvds clock patch
+
+/*------------------------------------------------------------------------------------20160923*/
+sgtl5000 issue : sgtl5000 has error after reboot
+	information : sgtl5000: probe of 2-000a failed with error -5
+	sgtl5000_i2c_probe : sgtl5000_fill_defaults(sgtl5000) 產生錯誤
+	anw :
+		sgtl5000_driver = {
+			-	.reg_cache_size = SGTL5000_MAX_REG_OFFSET,
+			-	.reg_word_size = sizeof(u16),
+	
+/*------------------------------------------------------------------------------------20160923*/
+PICO 測試 : ubuntu mp + pcba test . 
+./gpiop 130 out high
+./gpiop 82 in
+/*------------------------------------------------------------------------------------20160926*/
+program uartp, gpiop ..
+./uartp -u 0 8  (test uart0 loop 8 pin)
+./gpiop -g 130 out high (set gpio130 out high)
+./gpiop -g 82 in ( set gpio82 in)
+
+program PFT_160930 for new version
+/*------------------------------------------------------------------------------------20161003*/
+modify ubuntu mp tool mp_20161004 (wifi,bt),沒有3G
+mp test :
+	mp_uart1
+	mp_uart5
+	mp_canbus_client
+	mp_canbus_server
+	...
+AudioHDMI -- 只要執行..無法重測!! 尚未看. (或許是因為無接HDMI),無HDMI,所以先沒看.. !!
+
+/*------------------------------------------------------------------------------------20161004*/
+Q7 - serial download mode issue
+Change PE13 -> POR -> delay 300-500 msec ,
+modify Q7-mcu firmware
+gpio.c (gpio_init)		vGPIO_SetMode( DEF_GPIO_POR , DEF_GPIO_MODE_PUSHPULL ) ;
+gpio.h (pin define)		#define DEF_GPIO_POR      	0x52  /* 5 ,  2 */
+power.c(set delay time to high)	vGPIO_Write( DEF_GPIO_POR , HIGH ) ;
+結果 - 無效
+
+/*------------------------------------------------------------------------------------20161004*/
+git checkout RTX_4.1.15_1.0.0_ga	(Local branch switch to RTX_4.1.15_1.0.0_ga)
+git checkout RTX_3.14.28		(Local branch switch to RTX_3.14.28)
+
+3G module (for pico mp test)
+modify kernel configuration
+
+/dev/ttyACM 沒出現..
+	cdc_acm 1-1.6:1.0: This device cannot do calls on its own. It is not a modem.
+發現uboot的gpio設定沒設好.應該如下才是正確.
+-	gpio_direction_output(IMX_GPIO_NR(5, 20) , 1);
++	gpio_direction_output(IMX_GPIO_NR(5, 20) , 0);
+ 	gpio_direction_output(IMX_GPIO_NR(7, 11) , 0);
+ 	gpio_direction_output(IMX_GPIO_NR(7, 12) , 0);
+/*------------------------------------------------------------------------------------20161005*/
+ADLINK 板子到了. Duallite
+1. DDR stress test, HW說測試OK. 先skip
+2. MFG 確定有無抓到. 使用WrippingMachine mfg 抓到device.
+3. 使用SD卡測試, 更改u-boot 為dual-lite, 確定consol是否有output. (miniSDcard無反應)
+4. DDR stress test 來Calibration parameter, test over light, implement to uboot ddr parameter.
+5. Add Adlink board's file, config.
+6. Add kernel device tree
+
+7. random: nonblocking pool is initialized	(hang up ...)
+8. update uboot, kernel to server
+
+9. 修改kernel soc device tree (dual -> duallite),可開機進入
+10. mini_sdcard issue  , mask & remask - 就OK..怪.. 暫時先這樣!!
+	//setup_i2c(1, CONFIG_SYS_I2C_SPEED, 0x7f, &i2c_pad_info1);
+11. 直接function test.
+	(1) eth0 	ok
+	(2) eth1 	ok
+	(3) wifi 	ok
+	(4) uart1 	fail
+	(5) uart5 	ok
+	(6) gpio 	ok
+	(7) usb 	ok
+	(8) mcu_if 	ok
+	(9) console 	ok
+	(10) sdcard 	ok
+	(11) touch	ok
+	(12) lvds	ok
+	(13) can	ok
+	(14) sim	none
+	(15) hdmi	ok
+	(16) otg	ok
+	(17) touch	fail
+	
+	
+/*------------------------------------------------------------------------------------20161006*/
+/*------------------------------------------------------------------------------------20161024*/
+DISTRO=rtx-adlink-x11 MACHINE=rtx-adlink-imx6dl source fsl-setup-release.sh -b build-imx6dl-adlink
+bitbake -c clean virtual/kernel
+bitbake -c clean virtual/bootloader
+bitbake rtx-image-adlink
+
+DISTRO=rtx-adlink-dl-x11 MACHINE=rtx-adlink-imx6dl source fsl-setup-release.sh -b build-imx6dl-adlink
+bitbake -c clean virtual/kernel
+bitbake -c clean virtual/bootloader
+bitbake rtx-image-adlink
+/*------------------------------------------------------------------------------------20161012*/
+git clone ssh://gitolite@git-server.rtx.org/App/Python/mp-tools.git -b iMX6-PITX
+將mp_tools update到server上
+
+/*------------------------------------------------------------------------------------20161012*/
+Wrapping_Machine :    add teraoka patch & modify config
+    1. kernel-logo-teraoka.patch
+    2. max11801-pressure-detection-for-nv560.patch
+    3. mousedev-avoid-adding-touchscreen-as-mouse.patch
+    4. rtc-efm32-verbose-messages.patch
+    5. serial-imx-detection-of-scale-and-ac-line.patch
+    6. sgtl5000-maximum-volume-hack.patch
+    7. usb-hub-verbose-messages.patch
+    8. .config
+export ARCH=arm	
+export CROSS_COMPILE=/opt/freescale/usr/local/gcc-4.6.2-glibc-2.13-linaro-multilib-2011.12/fsl-linaro-toolchain/bin/arm-none-linux-gnueabi-
+make distclean
+make imx6_defconfig
+make uImage
+
+sudo dd if=u-boot.bin of=/dev/sdc bs=512 seek=2 skip=2(1K)
+sudo dd if=uImage of=/dev/sdc bs=512 seek=26624(13M)
+sudo dd if=/dev/zero of=/dev/sdc bs=512 seek=24576 count=10(12M)
+sudo tar -pxzvf rootfs.tgz -C /media/rtx-3110/Wrapping_Machine/
+
+release kernel_1_2 kernel_1_3 uboot-imx
+
+BSP release bin file :
+	10/28 
+/*--------------------------------------------------------------------------------------------*/
+10/20 debug kernel for sample. (5 pice)
+10/28 test tool - sample, release u-boot ? kernel ? firmware ?
+11/04 release for adlink - first
+11/11 release for adlink - mp
+11/25 release ui for qtpy ? 
+
+/*---------------------------------------------------------------------------20161215-20161024*/
+Wrapping_Machine BSP Release
+export ARCH=arm	
+export CROSS_COMPILE=/opt/freescale/usr/local/gcc-4.6.2-glibc-2.13-linaro-multilib-2011.12/fsl-linaro-toolchain/bin/arm-none-linux-gnueabi-
+製作 BSP1.2_WM_20161024.bin  (add init_ldb_clks)
+1. 確認Source Code : uboot, kernel, filesystem
+	uboot : make distclean, make mx6dl_sabresd_config, make
+	kernel_1_2 : make distclean, make imx6_defconfig, make uImage
+
+2. < DD /dev/zero to /dev/mmcblk0 >
+	echo 0 > /sys/block/mmcblk0boot0/force_ro	(# Enable writes to /dev/mmcblk1boot0)
+	dd if=/dev/zero of=/dev/mmcblk0boot0
+	echo 1 > /sys/block/mmcblk0boot0/force_ro
+	dd if=/dev/zero of=/dev/mmcblk0
+
+	hexdump /dev/mmcblk0
+	hexdump /dev/mmcblk0boot0
+	hexdump /dev/mmcblk0boot1			(確定 zero)
+		
+3. < DD file system to /dev/mmcblk0 >
+	fdisk /dev/mmcblk0
+		/dev/mmcblk0p1 : 65536 - limit size +3200M	
+			( 更改成 +3200M, 3.5G, 總長度 3200+64=3264M )
+			( /dev/mmcblk0p1           65536     6315536     3125000+  83  Linux )
+		mkfs.ext4 -j /dev/mmcblk0p1
+	將檔案D到Emmc
+		echo 0 > /sys/block/mmcblk0boot0/force_ro
+		dd if=u-boot.bin of=/dev/mmcblk0boot0 bs=512 seek=2 skip=2
+		echo 1 > /sys/block/mmcblk0boot0/force_ro	
+		dd if=uImage_1_2 of=/dev/mmcblk0 bs=512 seek=26624
+		mount -t ext4 /dev/mmcblk0p1	/mnt/
+		tar --numeric-owner -pxzvf rootfs.tgz -C /mnt/	
+		(--numeric-owner 以用户識别碼及群组識别碼取代用户名稱和群组名稱。)
+		重新開機確認OK!!
+	
+4. < DD /dev/mmcblk0 to BSP1.3_WM_161215.bin >
+	dd if=/dev/mmcblk0 of=/mnt/sda1/BSP1.3_WM_161215.bin bs=512 count=2
+	dd if=/dev/mmcblk0boot0 of=/mnt/sda1/BSP1.3_WM_161215.bin bs=1k seek=1 skip=1 count=1024 
+	(input來源skip 1k, output目的seek 1k, size大小1M)
+	dd if=/dev/mmcblk0 of=/mnt/sda1/BSP1.3_WM_161215.bin bs=1024 seek=786 skip=786 count=1024	
+	(dd u-boot parameter size=1M)
+	dd if=/dev/mmcblk0 of=/mnt/sda1/BSP1.3_WM_161215.bin bs=1M seek=1 skip=1 count=3300	(count > 3264)
+	hexdump /mnt/sda1/BSP1.3_WM_161215.bin  -s 1024 -n 2048(only check 1k-3k byte)
+
+變更, (BSP.bin -> BSP.zip release)
+	sudo tar --numeric-owner -pxzvf rootfs.tgz -C wm_rootfs_13/	(原rootfs)
+	mount /dev/loop0	/mnt/					(掛BSP.bin到mnt)
+	check.py							(比較rootfs)
+		BSP 1.2 (差異,開機一次 ）
+			/home/teraoka/.cache/
+			/var/log/var/agentx
+			/var/agentx
+		bsp 1.3 (差異,開機一次 ）
+			/Nv560/NvConsole/data/db/NV.FBK
+			/var/log/var/agentx
+			/var/agentx
+			
+5. < DD /dev/zero to /dev/mmcblk0 >
+	echo 0 > /sys/block/mmcblk0boot0/force_ro	(# Enable writes to /dev/mmcblk0boot0)
+	dd if=/dev/zero of=/dev/mmcblk0boot0
+	echo 1 > /sys/block/mmcblk0boot0/force_ro
+	dd if=/dev/zero of=/dev/mmcblk0
+	
+6. < DD BSP1.2_WM_20161024.bin to /dev/mmcblk0 >
+	echo 0 > /sys/block/mmcblk0boot0/force_ro
+	dd if=/mnt/sda1/BSP1.2_WM_20161024.bin of=/dev/mmcblk0boot0 bs=1k seek=1 skip=1 count=1024 
+	echo 1 > /sys/block/mmcblk0boot0/force_ro
+	dd if=/mnt/sda1/BSP1.2_WM_20161024.bin of=/dev/mmcblk0
+	hexdump /dev/mmcblk0boot0
+	hexdump /dev/mmcblk0
+
+製作 BSP1.3_WM_20161024.bin  (add all patch)
+/*------------------------------------------------------------------------------------20161104*/
+release PFT_161104
+	給ABB客戶 or ADLINK的相關測試程式. (持續更改中..)
+/*------------------------------------------------------------------------------------20161108*/
+Support Eye pattern (USB, LAN, PCIE), SI 訊號
+USB部份:
+	/unit_tests/memtool 0x02184184 1	(read register 0x02184184 : OTG Port Status & Control)
+	/unit_tests/memtool 0x02184384 1	(read register 0x02184184 : USB Port Status & Control)
+	/unit_tests/memtool 0x02184184=0x18441205	(write register 0x02184184 : OTG Eye pattern out)
+	/unit_tests/memtool 0x02184384=0x18441205	(write register 0x02184384 : USB Eye pattern out)
+	OTG port 會先插入USB隨身碟, 讓driver先Init, 在設定.
+	
+	OTG pattern 有需要調整 : 電壓大小.
+		USB PHY Transmitter Control Register : 
+			0x20C9010 (USBPHY1_TX) => 0x10060607,0x10060607,0x10060607,0x10060607,		(OTG ?)
+			0x20CA010 (USBPHY2_TX) => 0x10060607,0x10060607,0x10060607,0x10060607,		(USB ?)
+			drivers/usb/phy/phy-mxs-usb.c
+
+	imx6dl-rtx-adlink.dts :
+		&usbphy1 {
+			tx-d-cal = <0x5>;			(調整C_CAL值)
+		};
+		
+LAN部份:
+	更改檔案 arch/arm/mach-imx/mach-imx6q.c   : ksz9031rn_phy_fixup()
+	val0 = phy_read(dev, 0x0);
+	val9 = phy_read(dev, 0x9);
+	printk( "\nPHY 0x00h : 0x%X, PHY 0x09h : 0x%X" , val0, val9 ) ;
+	phy_write(dev, 0x00, 0x0140);
+	phy_write(dev, 0x09, val9|0x8000);	(設定Pattern mode 4 ,or 可設mode 1)
+	val0 = phy_read(dev, 0x0);
+	val9 = phy_read(dev, 0x9);
+	printk( "\nPHY 0x00h : 0x%X, PHY 0x09h : 0x%X" , val0, val9 ) ;	
+	後面設定會再被更改. (但目前不繼續..先這樣)
+PCIE部份: 
+	Kernel firmware 必須設定以下兩點.
+	1. 設定Config : PCI_IMX6_COMPLIANCE_TEST
+	2. drivers/pci/host/pci-imx6.c	(將以下 mark)
+		#if 0	//a
+			if (ret) {
+				dev_err(pp->dev, "Failed to bring link up!\n");
+			} else {
+				tmp = readl(pp->dbi_base + 0x80);
+				dev_dbg(pp->dev, "Link up, Gen=%i\n", (tmp >> 16) & 0xf);
+			}
+		#endif
+		
+	The parameters of PCIe_PHY can be adjusted by changing the IOMUXC_GPR8 register settings
+	to get the test passed
+	IOMUXC_GPR8 = 0x020E0020
+	SWING_LOW		0x7F
+	SWING_FULL		0x7F
+	DEEMPH_GEN2_6DB		0x14
+	DEEMPH_GEN2_3P5DB	0x00
+	DEEMPH_GEN1		0x00
+
+	/unit_tests/memtool 20c4078  10  =>	0003C300 (讀回值)
+	/unit_tests/memtool 20c4078=3C303	(bit0,1 = 3)	//125M_root_enable
+	/unit_tests/memtool 20c80e0 10	=>	80002003 (讀回值)
+	/unit_tests/memtool 20c80e0=80082003	(bit19 = 1)	//125M clock: ENABLE_125M
+	/unit_tests/memtool 20c4018 10	=>	00A61224 (讀回值)
+	/unit_tests/memtool 20c4018=00A61624	(bit10 = 1)	//pcie_axi_clk_sel
+	/unit_tests/memtool 20e0004 10	=>	48440005 (讀回值)
+	/unit_tests/memtool 20e0004=48410005	(bit18 = 0, bit16 = 1)	//power: 18bit - 0; Clk: 16bit - 1(PCIe PHY CLock)
+
+	/unit_tests/memtool 0x01ffc0a0=0x10102
+	/unit_tests/memtool 0x020e0030=0x0f004090
+	/unit_tests/memtool 0x020e0030=0x0f004490
+
+/*------------------------------------------------------------------------------------20161108*/
+ADLINK test tool - 
+connect to wifi AP 1 : 
+	1. wpa_supplicant.conf
+	(wep)	network={
+        		ssid="12345-wep"
+        		key_mgmt=NONE
+        		wep_key0="12345"
+			}
+	(wpa)	network={
+        		ssid="1234567890-wpa"
+        		key_mgmt=WPA-PSK
+        		psk="1234567890"
+		}
+	2. wpa_supplicant -i wlan0 -c ~/wpa_supplicant.conf &
+	3. udhcpc -i wlan0
+	
+connect to wifi AP 2 : (只能用在wep)
+	1. iwconfig 這個指令就可以找出無線網卡的代號
+	2. ifconfig wlan0 up
+	3. iwlist wlan0 scanning | more 
+   		iwlist wlan0 scan
+	4. iwconfig wlan0 essid "12345-wep"	,iwconfig wlan0 essid "1726"
+	5. iwconfig wlan0 key open
+	6. iwconfig wlan0 key s:12345		,iwconfig wlan0 key s:1234567890123
+	7. iwconfig wlan0 mode managed
+	8. iwconfig wlan0 ap auto
+	9. udhcpc -i wlan0 			,dhclient wlan0
+
+/*------------------------------------------------------------------------------------20161111*/
+Add efm32 boot recovery at uboot and efm.bin
+	1. efm32 - MCU firmware add WDT function
+	2. kernel driver - rtc-efm32-adlink.c
+/*------------------------------------------------------------------------------------20161114*/
+MFG-161114-release
+rtx_pitx_mx6q_mfg.h	(uboot, kernel - mfg disable wdt )
+wdt 執行檔 : ./efm32cmd 2 0x0c -sg 10	(設定wdt)
+	1. kernel 	Tags: ADLINK-Ver1.0
+	2. u-boot	Tags: ADLINK-Ver1.0
+	3. yocto rebuild 20161114
+	
+/*------------------------------------------------------------------------------------20161115*/
+bitbake -c clean linux-rtx
+bitbake -c cleansstate linux-imx
+bitbake linux-rtx-dl
+
+/*------------------------------------------------------------------------------------20161115*/
+ADLINK 製作 MFGTOOL 的Image.
+MFG - uboot
+	U_BOOT_DEFAULT_CONFIG=rtx_adlink_mx6dl_micro1g_mfg_defconfig
+MFG - kernel
+	KERNEL_DEFAULT_CONFIG=imx_v7_mfg_defconfig
+...........
+/*------------------------------------------------------------------------------------20161117*/
+ADLINK response :
+	memtester 512 1
+	iperf
+	data compare for usb, sdcard, emmc
+	ping x.x.x.x
+	boot test, count 
+	save log
+/*------------------------------------------------------------------------------------20161117*/
+ADLINK - Yocto Install & Patch
+1. $ mkdir fsl-release-bsp
+   $ cd fsl-release-bsp
+   $ repo init -u git://git.freescale.com/imx/fsl-arm-yocto-bsp.git -b imx-4.1.15-1.0.0_ga
+   $ repo sync
+2. DISTRO=fsl-imx-x11 MACHINE=imx6dlsabresd source fsl-setup-release.sh -b build-adlink
+   bitbake linux-imx		(原來的kernel source code)
+   bitbake u-boot-imx		(原來的u-boot source code)
+3. kernel : Document pdf/ lib .. 先處理掉	(找出patch)
+   uboot :					(找出patch)
+   
+4. diff --exclude=".*" -Naur kernel-source linux-rtx > kernel.patch	(忽略 .* 相關檔案, 前kernel-source 更改後linux-rtx)
+   patch -p0 < kernel.patch (確定OK)
+   diff --exclude=".*" -Naur u-boot-imx u-boot-rtx > uboot.patch
+   patch -p0 < uboot.patch (確定OK)			patch -R -p0 < uboot.patch (還原)
+5. meta-fsl-bsp-release/imx/meta-bsp/recipes-kernel/linux/linux-imx_4.1.15.bb
+	SRC_URI += " file://kernel.patch"
+   meta-fsl-bsp-release/imx/meta-bsp/recipes-bsp/u-boot/u-boot-imx_2015.04.bb
+	SRC_URI += " file://uboot.patch"
+6. MACHINE=imx6dlsabresd	=>	imx6dl-adlink-abb.conf		(置換)
+   DISTRO=fsl-imx-x11		=>	fsl-adlink-abb.conf
+7. DISTRO=fsl-adlink-abb MACHINE=imx6dl-adlink-abb source fsl-setup-release.sh -b build-adlink	
+	bitbake linux-imx
+	bitbake u-boot-imx
+	bitbake fsl-image-abb
+8. 取得	patch (skip .git .* 及 *.pyc檔案)
+   diff --exclude=".*" --exclude="*.pyc" -Naur sources sources_rtx > sources.patch
+/*------------------------------------------------------------------------------------20161121*/
+ADLINK - 客戶指令 
+1. Freescale Yocto Project User's Guide
+2. $ mkdir fsl-release-bsp
+   $ cd fsl-release-bsp
+   $ repo init -u git://git.freescale.com/imx/fsl-arm-yocto-bsp.git -b imx-4.1.15-1.0.0_ga
+   $ repo sync
+3. Update patch 
+   cd fsl-release-bsp
+   patch -p0 < sources.patch	(sources/meta-fsl-bsp-release)
+	imx/meta-bsp/recipes-kernel/linux/linux-imx_4.1.15.bb		(add kernel patch)
+	imx/meta-bsp/recipes-kernel/linux/linux-imx-4.1.15/		(kernel.patch)
+   	imx/meta-bsp/recipes-bsp/u-boot/u-boot-imx_2015.04.bb		(add uboot patch)
+	imx/meta-bsp/recipes-bsp/u-boot/u-boot-imx-2015.04/uboot.patch	(uboot.patch)
+	imx/meta-bsp/conf/machine/imx6dl-adlink-abb.conf		(uboot config && kernel - uImage)
+	imx/meta-sdk/conf/distro/fsl-adlink-abb.conf   			(Distro)
+   	imx/meta-sdk/recipes-fsl/images/fsl-image-abb.bb		(image)
+4. DISTRO=fsl-adlink-abb MACHINE=imx6dl-adlink-abb source fsl-setup-release.sh -b build-adlink	
+   bitbake linux-imx
+   bitbake u-boot-imx
+   bitbake fsl-image-abb
+5. 安裝 ADLINK 系統 ( disc = /dev/sdc ), kernel 4.1.15, Uboot 2015.04, FileSystem Yocto imx 4.1.15
+   cd tmp/deploy/images/imx6dl-adlink-abb/
+   若安裝位置於 /dev/sdc, 
+	1. clean all
+		sudo dd if=/dev/zero of=/dev/sdc bs=1M count=64		(p0 = 64M)
+	2. uboot 
+		sudo dd if=u-boot-adlink-2015.04-r0.imx of=/dev/sdc bs=1024 seek=1
+	3. kernel
+		sudo dd if=uImage--4.1.15-r0-imx6dl-adlink-abb-20161220152735.bin of=/dev/sdc bs=1024 seek=13312
+	4. dtb
+		sudo dd if=uImage--4.1.15-r0-imx6dl-rtx-adlink-20161220152735.dtb of=/dev/sdc bs=1024 seek=12800
+	5. fdisk /dev/sdc	- "131072"(64M) - "+3200M"
+		所用裝置 開機      開始         結束      區塊   識別號  系統
+		/dev/sdc1           131072     6684671     3276800   83  Linux
+	6. sudo mkfs.ext4 -j -L Yocto /dev/sdc1
+	7. mount -t ext4 /dev/sdc1 /mnt  (skip,system auto mount)
+	8. filesystem ( /dev/sdc1 131072 "0x20000" "64M" )
+		sudo tar --numeric-owner -pjxvf rtx-image-adlink-imx6dl-adlink-abb-20161220152735.rootfs.tar.bz2 -C /media/rtx-3110/Yocto/
+	9. kernel module (skip)
+/*------------------------------------------------------------------------------------20161124*/
+Wrapping_Machine : Add memtester
+./memtester 800M 1
+/*------------------------------------------------------------------------------------20161130*/
+ADLINK Release 
+Test Tool :	\\10.69.99.252 \Release\ADLink\ABB-PCBA\ABB\Yocto\V002-1-2016-11-28
+Source Code :	\\10.69.99.252 \Release\ADLink\ABB-PCBA\ABB\Yocto\SourceCode-2016-11-30
+/*------------------------------------------------------------------------------------20161130*/
+下載及安裝ubuntu-gnome-14.04.05-desktop-i386
+3110 PC3110 harry/harry
+
+/*------------------------------------------------------------------------------------20161208*/
+sudo tar -pczvf PFT_161207_release.tgz PFT_161207_release
+sudo tar -pxzvf PFT_161207_release.tgz
+/*------------------------------------------------------------------------------------20161208*/
+mksd update -
+gedit .mk_update_sd.rc
+	[Options]
+	platform=abb-emmc-5-micro-1g	(build's platform)
+	zipfilename=rtx-abb-yocto	(out zip's name)
+cd mk-update-sdcard/files/flash/	(check flash file)
+md5sum * > md5sum.txt			(out checksum to md5sum.txt)
+
+./mk_update_sd -e u-boot	: modify uboot parameter
+./mk_update_sd			: build rtx-abb-yocto-2016-12-8.zip 
+
+將rtx-abb-yocto-2016-12-8.zip複製到windows, 解開
+執行mksd (放入usb - sd card, 製作update 卡完成)
+/*------------------------------------------------------------------------------------20161208*/
+ADLINK MFG - 3.0.35 (Wrapping_Machine更改)
+uboot:
+	-include/configs/mx6dl_sabresd_mfg.h
+		#define CONFIG_UART_BASE_ADDR   UART2_BASE_ADDR
+		#define CONFIG_BOOTARGS         "console=ttymxc1,115200 rdinit=/linuxrc "\
+		#define CONFIG_MCU_WDOG		I2C3_BASE_ADDR
+		#define CONFIG_SYS_I2C_PORT             I2C3_BASE_ADDR
+	-board/freescale/mx6q_sabresd/mx6q_sabresd.c
+		mxc_iomux_v3_setup_pad(MX6DL_PAD_EIM_D26__UART2_TXD);
+		mxc_iomux_v3_setup_pad(MX6DL_PAD_EIM_D27__UART2_RXD);
+	-lib_arm/board.c
+		//saveenv();
+	-lib_arm/bootm.c
+		extern void mcu_wdog_disable();
+		mcu_wdog_disable();	//modify watch dog timer.
+kernel:
+	-arch/arm/mach-mx6/board-mx6dl_sabresd.h
+		MX6DL_PAD_EIM_D26__UART2_TXD,
+		-MX6DL_PAD_EIM_D26__GPIO_3_26,
+	-arch/arm/mach-mx6/board-mx6q_sabresd.c
+		early_console_setup(UART2_BASE_ADDR, uart_clk);
+ramdisk:
+	-相同
+	
+OK!!
+/*------------------------------------------------------------------------------------20161208*/
+mount bin file (install python-pyudev)
+  1. sudo losetup -f
+  2. sudo losetup -o 33554432 /dev/loop0 BSP1.3_WM_20161024.bin 	(65536 * 512 = 33554432)
+  3. mount /dev/loop0 /mnt/
+
+  4. sudo losetup -d /dev/loop0		(釋放)
+  
+compare : check.py
+  1. 使用兩個資料夾比較 (BSP.bin)  (rootfs.tgz)
+/*------------------------------------------------------------------------------------20161208*/
+Wrapping Machine, FTP Server :
+  Host: bridge.lineo.co.jp
+  UserID: rtx
+  Pass: dTM2DMEj
+  PASV: ON
+  port: 21
+  
+/*------------------------------------------------------------------------------------20161209*/
+ssh root@192.168.11.35 (連線到板端)
+ssh rtx-3110@192.168.11.7 (連線到電腦)
+exit (離開)
+scp efm32cmd root@192.168.11.35:/home/root/ (copy efm32cmd到板端)
+ssh-keygen -f "/home/rtx-3110/.ssh/known_hosts" -R 192.168.11.35	(remove RSA host key for 192.168.11.35)
+/*------------------------------------------------------------------------------------20161212*/
+SI訊號, eye pattern 輸出:
+ethtool -s eth0 autoneg off speed 100
+        Supported ports: [ TP MII ]
+        Supported link modes:   10baseT/Half 10baseT/Full
+                                100baseT/Half 100baseT/Full
+                                1000baseT/Full
+        Supported pause frame use: Symmetric
+        Supports auto-negotiation: Yes
+        Advertised link modes:  10baseT/Half 10baseT/Full
+                                100baseT/Half 100baseT/Full
+                                1000baseT/Full
+        Advertised pause frame use: Symmetric
+        Advertised auto-negotiation: No
+        Speed: 100Mb/s
+        Duplex: Half
+        Port: MII
+        PHYAD: 7
+        Transceiver: external
+        Auto-negotiation: off
+        Supports Wake-on: d
+        Wake-on: d
+        Link detected: no
+ethtool -s eth0 speed 10 duplex full autoneg on
+ethtool -s eth0 mdix off (測10M,原廠要把mdix off)
+/*------------------------------------------------------------------------------------20161212*/
+Ubuntu : 
+	gksudo putty
+/*------------------------------------------------------------------------------------20161214*/
+/usr/share/applications/xinput_calibrator.desktop
+	Name=Calibrate Touchscreen
+	Name[de]=Touchscreen Kalibrieren
+	Name[nl]=Touchscreen Kalibreren
+	Comment=Run the calibration tool for touchscreens
+	Exec=/bin/sh -c "xinput_calibrator; cat"
+	Terminal=true
+	Type=Application
+	Icon=xinput_calibrator
+	StartupNotify=true
+	Categories=System;Settings;
+	
+---------------------------------------------------------------------
+直接在lvds-terminal,執行 /bin/sh -c "xinput_calibrator; cat > " 後, 
+將calibration結果放到
+	/etc/X11/xorg.conf.d/99-calibration.conf
+	section "Inputclass"
+	        Identifier      "calibration"
+	        MatchProduct    "ADS7846 Touchscreen"
+	        Option          "calibration"   "53 3981 278 3930"
+	        Option          "SwapAxes"      "0"
+	Endsection
+---------------------------------------------------------------------
+或是 console 執行 :
+export DISPLAY=:0
+xrandr			(check resolution)
+xdpyinfo		(check resolution)
+xinput_calibrator
+變更 以下指令到 : /usr/share/applications/xinput_calibrator.desktop
+Exec=/bin/sh -c "mkdir /etc/X11/xorg.conf.d; xinput_calibrator --precalib | tail -n 6 > /etc/X11/xorg.conf.d/99-calibration.conf"
+sed -i "s/xinput_calibrator; cat/mkdir \/etc\/X11\/xorg.conf.d; xinput_calibrator --precalib | tail -n 6 > \/etc\/X11\/xorg.conf.d\/99-calibration.conf/g" xinput_calibrator.desktop
+=> 後來更改成 xinput_calibrator_save.sh 來執行 (看update)
+bitbake -c cleanall qtwebengine
+bitbake fsl-image-abb
+check firefox 是否有執行.
+/*------------------------------------------------------------------------------------20161222*/
+board_r.c : init_fnc_t init_sequence_r 主要流程
+uboot usb boot :	(與 uboot emmc boot 相似)
+	1. board/retronix/rtx_adlink_mx6dl/rtx_adlink_mx6.c
+		MX6_PAD_GPIO_19__GPIO4_IO05 | MUX_PAD_CTRL(NO_PAD_CTRL)		//usb otg pwr
+		MX6_PAD_ENET_TXD0__GPIO1_IO30 | MUX_PAD_CTRL(NO_PAD_CTRL)	//usb h1 pwr
+		是否有 Power On
+	2. function usb : enable
+		bootsel_set function usb enable
+	3. bootsel_checkstorage_usb( void )
+	+	if (usb_init() < 0)
+	+		return;
+	+	else
+	+		usbid = usb_stor_scan(1) ;
+ 		bootsel_load_system_from_usb( usbid ) ;
+
+ext4ls usb 0	: check usb ext4 file
+fatls usb 0	: check usb fat file
+/*------------------------------------------------------------------------------------20161227*/
+Modify u-boot ARM PLL : cpu freq from 800MHz to 1GHz	(Kernel 4.1.15)
+Show iMx6 Chip information
+	cpu freq = sys_freq / (reg + 1) 
+	reg = cacrr (0x20c_4010h) -> podf (divide)		CCM Arm Clock Root Register
+	sys_freq = analog_pll_sys (0x20c_8000) -> DIV_SELECT 	Analog ARM PLL control Register
+	real output = fin * div_select / 2		(fin = 24000000 = 24MHz, SYS 基頻選擇)
+default example :
+	podf = 0
+	DIV_SELECT = 66
+	24MHz x 66 / 2 = 792MHZ
+Uboot Console output :
+	lib/display_options.c	->	int display_options (void)
+				->	printf ("\n\n%s\n\n", version_string);		(uboot 開頭!!)
+ARM PLL Setting :
+	/arch/arm/include/asm/arch-mx6/clock.h
+		void set_mcu_main_clk(void);
+	/arch/arm/cpu/armv7/mx6/clock.c
+		void set_mcu_main_clk(void)	<CMD state="Updater" type="push" body="frf">Finishing rootfs write</CMD> 
+		{
+			u32 reg = 0;
+			reg = readl(&imx_ccm->analog_pll_sys);
+			reg &= 0xfffffff8;
+			reg |= 0x53;
+			writel(reg, &imx_ccm->analog_pll_sys);
+			udelay(1000);
+		}
+	/arch/arm/imx-common/cpu.c	->	int print_cpuinfo(void) function	(加在此中,執行)
+		set_mcu_main_clk();
+		cpurev = get_cpu_rev();
+/*------------------------------------------------------------------------------------20161227*/	
+Wrapping Machine : 20161227 下載 
+/*------------------------------------------------------------------------------------20161229*/
+QT  熟悉
+	1. /etc/issue,	/etc/issue.net,	/etc/motd	顯示login前後訊息!!
+	2. /etc/modprobe.d/blacklist.conf		disable auto modprobe
+	
+/*------------------------------------------------------------------------------------20170103*/
+Adlink u-boot-imx patch
+	1. .git -> u-boot-imx
+	2. rm patches/ rtx_adlink_mx6dl_micro1g_dtb_rtx_all_linux_defconfig/ .pc folder
+		=> fastboot/ rtx/Kconfig/ out 檔案..再確認 (rtx uboot)
+	3. build.sh 複製過去. 不須更改
+	4. diff --exclude=".*" -Naur u-boot-imx u-boot-rtx > uboot.patch
+		放置去sources中
+	5. diff --exclude=".*" --exclude="*.pyc" -Naur sources sources_rtx > sources.patch
+	6. patch -p0 < 0001_sources.patch	(使用Patch)
+	7. DISTRO=fsl-adlink-abb MACHINE=imx6dl-adlink-abb source fsl-setup-release.sh -b build-adlink
+/*------------------------------------------------------------------------------------20170104*/
+Yocto Demon
+	1. Starting Xserver
+	2. Starting system message bus: dbus.
+	3. Starting Connection Manager
+	4. Starting Dropbear SSH server: dropbear.
+	5. Starting rpcbind daemon...
+	6. starting statd: done
+	7. Starting advanced power management daemon: No APM support in kernel
+	8. NFS daemon support not enabled in kernel
+	9. Starting syslogd/klogd: done
+	10. Starting Avahi mDNS/DNS-SD Daemon: avahi-daemon
+	11. Starting Telephony daemon
+	12. Starting Linux NFC daemon
+	13. Starting autohdmi
+	14. Running local boot scripts (/etc/rc.local).
+/*------------------------------------------------------------------------------------20170105*/
+DTS devices tree :
+	memory { reg = <0x10000000 0x40000000>;	};	//cpu access位址,大小1G
+		//10000000-4fffffff : System RAM	//cat /proc/memio
+  		//	10008000-10a988bb : Kernel code
+  		//	10af6000-10bc46d3 : Kernel data
+/*------------------------------------------------------------------------------------20170109*/
+MX6 USB_OTG_PWR_EN 正常動作 :
+	首先設定PING Define :	
+		MX6QDL_PAD_ENET_RX_ER__USB_OTG_ID	0x17059		/* USB_OTG_ID */
+		MX6QDL_PAD_KEY_ROW4__USB_OTG_PWR	0x000b0		/* USB_OTG_PWR */
+		MX6QDL_PAD_EIM_D21__USB_OTG_OC		0x1b0b0		/* USB_OTG_OC */
+	DTS :
+		reg_usb_otg_vbus: usb_otg_vbus {
+			compatible = "regulator-fixed";
+			regulator-name = "usb_otg_vbus";
+			regulator-min-microvolt = <5000000>;
+			regulator-max-microvolt = <5000000>;
+			gpio = <&gpio4 15 0>;
+			enable-active-high;
+		};	
+	1. OTG Host(Slave)		->	PWR_EN Enable(Disable)	->	OTG_VBUS High(Low)
+	2. OTG Host OverCurrent(Normal)	->	PWR_EN Disable(Enable)	->	OTG_VBUS Low(High)
+	
+Uboot 2015.04 OverCurrent disable Setting : 
+	driver/usb/host/ehci-mx6.c	usb_oc_config(int index) : disable usb over current
+	會造成 kernel dts : 將disable-over-current;拿掉, 還是無法OverCurrnet Protect的情況!! 無法控制!!
+	
+OTG port PORTSC1 : 0x2184184 可以check是否有 over current!!
+	PE(Port Enabled), OCC(Over-current Change), OCA(Over-current Active), PP(Port Power)  
+/*------------------------------------------------------------------------------------20170109*/
+未來ADLINK USB_OTG_PWR 變更, 要再變更FW!!!!!!!!!!
+	uart5 {
+		/* DTE mode */
+		pinctrl_uart5_dte: uart5-dtegrp {
+			fsl,pins = <
+				MX6QDL_PAD_CSI0_DAT14__UART5_RX_DATA		0x1b0b1
+				MX6QDL_PAD_CSI0_DAT15__UART5_TX_DATA		0x1b0b1
+/*				MX6QDL_PAD_KEY_ROW4__UART5_RTS_B		0x1b0b1		*/
+				MX6QDL_PAD_KEY_COL4__UART5_CTS_B		0x1b0b1
+			>;
+		};
+	};
+
+
+	usbotg {
+		pinctrl_usbotg_adlink: usbotg-adlink {
+			fsl,pins = <
+				MX6QDL_PAD_ENET_RX_ER__USB_OTG_ID			0x17059		/* USB_OTG_ID */
+				MX6QDL_PAD_KEY_ROW4__USB_OTG_PWR			0x000b0		/* USB_OTG_PWR */
+				MX6QDL_PAD_EIM_D21__USB_OTG_OC				0x1b0b0		/* USB_OTG_OC */
+			>;
+		};
+	};
+	
+		reg_usb_otg_vbus: usb_otg_vbus {
+			compatible = "regulator-fixed";
+			regulator-name = "usb_otg_vbus";
+			regulator-min-microvolt = <5000000>;
+			regulator-max-microvolt = <5000000>;
+			gpio = <&gpio4 15 0>;
+			enable-active-high;
+		};
+
+/*------------------------------------------------------------------------------------20170109*/
+Check Pico Wifi module
+	1. git checkout RTX_3.14.28
+	2. check AW-CB161H (PCI Wifi/ USB bluetooth), Driver hangup
+	3. use RTX_4.1.15 kernel, 
+		<*>   IEEE 802.11 for Host AP (Prism2/2.5/3 and WEP/TKIP/CCMP)
+			[*]     Support downloading firmware images with Host AP driver
+			[*]       Support for non-volatile firmware download
+		apt-get upgrade & apt-get update
+	4. 重新update rtlwifi(rtlwifi_new) driver for rtl8821aefw
+	5. push to 3.14.28/ 4.1.15 kernel
+	
+->mksd-pitx-1g-ubuntu14-20161222
+	+ 3.14.28_kernel(imx_temp_passive_max = 300000)
+	+ uboot(TEMPERATURE_HOT 285, TEMPERATURE_MAX 325)
+	+ relibility test
+
+/*------------------------------------------------------------------------------------20170111*/
+Check SI 12,
+還原系統. 
+	1. 製作USB開機系統(用以下指令將clonezilla安裝於USB碟)
+		sudo mkfs.fat -F 32 /dev/sdc1
+		unzip clonezilla-live-20151012-wily-amd64.zip -d /media/rtx-3110/23FF-2328/
+	2. ESC key into BIOS, 設定BIOS為USB開機.
+	3. 進入clonezilla系統, 將檔案ghost回硬碟.
+
+網路Ip設定, 提供網路設定文件, 變更 /etc/network/interfaces
+/*------------------------------------------------------------------------------------20170117*/
+提供Adlink/ Abb, mksd的工具.
+
+/*------------------------------------------------------------------------------------20170117*/
+ADLINK/ PICO yocto 
+1. repo init -u ssh://gitolite@git-server.rtx.org/Yocto/NXP/fsl-arm-yocto-bsp.git -b RTX-ADLink-ABB-4.1.15-1.0.0_ga
+2. add DISTRO=pitx-x11 MACHINE=imx6q-pitx image=fsl-image-pitx
+3. DISTRO=pitx-x11 MACHINE=imx6q-pitx source fsl-setup-release.sh -b build-pitx
+4. bblayers.conf : BBLAYERS += " ${BSPDIR}/sources/meta-rtx-arm "
+5. bitbake linux-pitx
+6. bitbake u-boot-pitx
+7. bitbake fsl-image-pitx
+
+hangup : start kernel	or
+hdmi issue : vgaarb this pci device is not a vga device
+vgaarb this pci device is not a vga device
+重新更改 imx6q-rtx-soc.dtsi , OK!!  
+	- hdmi_audio:  dmas = <&sdma 2 25 0>; 
+	- intc : interrupt-parent = <&intc>;
+	- ..
+
+git push (遠端倉庫名) (分支名) :  建立新的branch
+(本地分支iMX6-Q7推送到某個命名不同的遠端分支：若想把遠端分支叫作IMX6-PITX)	
+git push aosp IMX6-PITX:IMX6-PITX 
+
+使用同一包
+1. DISTRO=fsl-adlink-abb MACHINE=imx6dl-adlink-abb source fsl-setup-release.sh -b build-adlink
+2. bitbake fsl-image-abb		(size = 483222651)
+3. bitbake fsl-image-machine-test 	(size = 226115420)
+4. bitbake core-image-minimal 		(size = 2588759)
+5. bitbake fsl-image-mfgtool-initramfs	
+
+/*------------------------------------------------------------------------------------20170118*/
+Wrapping Machine : check 相關屬性 (Update-2017-01-18.zip)
+	stat --format "%a %U %G %n" /usr/bin/dotlockfile /usr/bin/mail-lock /usr/bin/mail-touchlock /usr/bin/mail-unlock /usr/lib/dbus-1.0/dbus-daemon-launch-helper /var/mail
+	chown 更改uid/pid後, 必需還原檔案屬性.
+	chmod 2755 /mnt/usr/bin/dotlockfile
+	chmod 2755 /mnt/usr/bin/mail-lock
+	chmod 2755 /mnt/usr/bin/mail-touchlock
+	chmod 2755 /mnt/usr/bin/mail-unlock
+	chmod 4754 /mnt/usr/lib/dbus-1.0/dbus-daemon-launch-helper
+	chmod 2755 /mnt/var/mail
+	sync
+/*------------------------------------------------------------------------------------20170124*/	
+ADLINK - DDR stress test
+可以作一下!!
+
+/*------------------------------------------------------------------------------------20170202*/
+bitbake 使用說明/ study
+	1. SRC_URI 這個變數被用來存放產生原始碼用的資訊
+		1-a. bitbake 會自動根據其內容將原始碼放置於 WORKDIR 之中
+		1-b. 變數 S 則是存放展開後並 patch 過的原始碼
+		1-c. 變數 D 代表 target filesystem 的位置
+	2. inherit 模組的種類
+		2-a. inherit autotools : 加入BB檔, BitBake 會自動的產生需要的命令以產生 configure 和 Makefiles。
+		2-b. inherit distutils : python distutils, 會自動使將 python 加到 DEPENDS 之中。
+		2-c. inherit + pkgconfig/ binconfig/ udpate-rc.d  加入BB檔
+	3. python 
+		3-a. base_condition(a,b,if_value, lese_value,d)
+		3-b. base_contains(array,v,haskey_value, noexist_value,d)
+		3-c. oe_runamek/ oe_runconf/ ...
+		3-d. Bitbake 的巨集可以寫成 ${@ppppp}, ppppp 是任意的 python 命令
+			從 BB 檔中取出FILE變數，然後取出其路徑的部份, 使用這個方法，其實我們己經可以做很複雜的事了。 :
+				${@os.path.dirname(bb.data.getVar('FILE',d,1))}
+			•base_condition(a,b,if_value, lese_value,d)
+				◦比較 a 和 b，如果 a==b，傳回 if_value，否則傳回 else_value。
+			•base_contains(array,v,haskey_value, noexist_value,d)
+				◦如果 v 在 array 之中，傳回 haskey_value, 否則傳回 noexist_value。
+	4. rpm/deb/pkg 模組資訊
+		4-a. DESCRIPTION - 對這個模組的描述。
+		4-b. HOMEPAGE - 有關這個模組的一個 URL
+		4-c. SECTION - 這個模組的類別
+		4-d. PRIORITY - 這個模組的必要性。
+		4-e. DEPENDS - 列舉所有在這個模組之前必須完成的模組。
+---------------------------------------------------------
+OpenEmbedded 腳本(bitbake) & 數據(classes/ conf/ packages) & build
+建構過程 : 包括下載(fetch), 解包(unpack), 打補丁(patch), configure(如果使用autotool), 編譯(compile), 安裝(install), 打包
+		(package), staging(...), 作安裝包(package_write_ipk), 構建文件系統
+
+/*------------------------------------------------------------------------------------20170202*/
+Wrapping Machine :
+	1. RUNIN 10000 - MFG : MFG-Tools-MP-2017-02-07
+		select : name = runin-sdcard-20170207
+		select : name = runin-emmc-20170207
+		MCU : 160311 - auto power on
+			版本 #define SOFTWARE_VERSION 	{'t',16,3,11}
+			開啟 void GPIO_EVEN_IRQHandler(void)  :	vPower_SetPowerNeedOn( ) ;
+		clear : /home/user/mmc_2M_Count --set count=0
+	2. MP
+		select : name = mp-sdcard-20170207
+	3. BSP
+		MFG : MFG-Tools-2017-02-02.zip	(mfg - new uImage)
+		Bin : 
+			1. sdcard boot & dd if=/dev/zero of=/dev/mmcblk0
+			2. MFG-Tools-2017-02-02 
+			3. BSP_20170202.bin	
+				dd if=/dev/mmcblk0 of=/mnt/sda1/BSP_20170202.bin bs=512 count=2
+				dd if=/dev/mmcblk0boot0 of=/mnt/sda1/BSP_20170202.bin bs=1k seek=1 skip=1 count=1024 
+				(input來源skip 1k, output目的seek 1k, size大小1M)
+				dd if=/dev/mmcblk0 of=/mnt/sda1/BSP_20170202.bin bs=1k seek=786 skip=786 count=1024	
+				(dd u-boot parameter size=1M)
+				dd if=/dev/mmcblk0 of=/mnt/sda1/BSP_20170202.bin bs=1M seek=1 skip=1 count=3300	(count > 3264)			
+			4. Verify BSP_20170202.bin
+				echo 0 > /sys/block/mmcblk0boot0/force_ro
+				dd if=/mnt/sda1/BSP_20170202.bin of=/dev/mmcblk0boot0 bs=1k seek=1 skip=1 count=1024 
+				echo 1 > /sys/block/mmcblk0boot0/force_ro
+				dd if=/mnt/sda1/BSP_20170202.bin of=/dev/mmcblk0
+			5. Check mmcblk0
+				hexdump /dev/mmcblk0boot0
+				hexdump /dev/mmcblk0
+	4. Realibility
+		MFG : MFG-Tools-MP-2017-02-07
+			name = runin-emmc-20170207
+			
+	5. uboot boot count :
+		a. 函式放置在lib_arm/board.c的 void mcu_wdog_disable() 後面就可
+		void mcu_count()
+		{
+			unsigned char wbuf[6] = { 0 };
+			unsigned char buf[7] = { 0 };
+			unsigned char ucsum, retry = 0;
+			uint32_t MCUcount=0, count0, count1, count2, count3 ;
+			uint8_t mcu_count[4];
+	
+			if (!i2c_probe(0x0C)) {
+			retry:
+				wbuf[0] = 0x95;
+				wbuf[1] = 0x92;
+				wbuf[2] = 0x03;
+				if (i2c_read_mcu(0x0C, wbuf, 3, buf, 7)) {
+					printf("%s:i2c_read:error\n", __func__);
+				}
+				else {
+					if(buf[0] == 7){
+					ucsum = buf[0] + buf[1] + buf[2] + buf[3] + buf[4] + buf[5];
+					//printf("0x%02X, 0x%02X, 0x%02X, 0x%02X, 0x%02X, 0x%02X, \
+					0x%02X", buf[0], buf[1], buf[2], buf[3], buf[4], buf[5], buf[6]);
+						if(buf[6] == ucsum && buf[1] == 0xA2){
+						MCUcount = buf[2] + (buf[3] << 8) + (buf[4] << 16) + (buf[5] << 24);
+						printf("\n MCU_COUNT = %d \n\n",MCUcount);
+						}else{
+						retry++;
+						printf("%s:i2c : Fail, retry:%d\n", __func__, retry);
+						//if(retry < 5)goto retry;
+						}
+					}else{
+						printf("%s:i2c : Fail, buf[0]:%d\n", __func__, buf[0]);
+					}
+				}
+			}
+		}
+		b. 執行command放在 lib_arm/board.c的 s = getenv ("Mem_Test"); 之前
+			mcu_count()
+		c. efm mcu firmware
+		1. c/i2ccmd.c
+			+	3      , // DEF_I2CCMD_MASTER_GET_COUNT
+			
+			+int iI2CCmd_SentCount( void )
+			+{
+			+	uint8_t u8McuCount[4] = { 0 } ;
+			+	uint8_t u8Loop ;
+			+	int     iPutIndex  ;
+			+	
+			+	u32Count = u32Count + 1;
+			+	u8McuCount[3] = u32Count >> 24;
+			+	u8McuCount[2] = (u32Count >> 16) & 0xff;
+			+	u8McuCount[1] = (u32Count >> 8) & 0xff;
+			+	u8McuCount[0] = u32Count & 0xff;
+			+
+			+	iPutIndex = DEF_I2CCMD_DATA ;
+			+	
+			+	for( u8Loop = 0 ; u8Loop < 4 ; u8Loop++ )
+			+	{
+			+		u8I2CSentData[iPutIndex++] = u8McuCount[u8Loop] ;
+			+	}
+			+	
+			+	return ( iI2CCmd_SetData( 4 ) ) ;
+			+}
+			
+			+		case DEF_I2CCMD_MASTER_GET_COUNT   	:
+			+			u8I2CSentCmdLen = iI2CCmd_SentCount( ) ;
+			+		break ;		
+		2. c/power.c	+	uint32_t u32Count ;
+		3. h/power.h	+	EXTERN uint32_t u32Count ;
+		4. h/i2ccmd.h	+	#define DEF_I2CCMD_MASTER_GET_COUNT   	0x92
+		
+		efm32cmd 未完成. check.
+		5. tools/c/efm32cmd.c	+	3 +  4 , // DEF_EFM32CMD_MASTER_GET_COUNT
+					+	3      , // DEF_I2CCMD_MASTER_GET_COUNT
+		6. tools/c/i2c.c	+#define DEF_I2CCMD_MASTER_GET_VERSION   	0x92
+					+	3 +  4 , // DEF_I2CCMD_MASTER_GET_COUNT
+
+future : emmc warning ? 字眼要不要拿掉.
+
+/*------------------------------------------------------------------------------------20170207*/
+ADLINK Yocto 的學習
+	DISTRO=fsl-adlink-abb MACHINE=imx6dl-adlink-abb source fsl-setup-release.sh -b build-test2
+	1-1. sources/meta-fsl-bsp-release/imx/meta-sdk/conf/distro/fsl-adlink-abb.conf
+		1-1-1. sources/meta-fsl-bsp-release/imx/meta-sdk/conf/distro/include/fsl-imx-base.inc
+		1-1-2. sources/meta-fsl-bsp-release/imx/meta-sdk/conf/distro/include/fsl-imx-preferred-env.inc
+	1-2. sources/meta-fsl-bsp-release/imx/meta-bsp/conf/machine/imx6dl-adlink-abb.conf
+		1-2-1. sources/meta-fsl-arm/conf/machine/include/imx6sabresd-common.inc
+
+	1-3. linux-imx_4.1.15.bb
+		1-3-1. sources/meta-fsl-arm/recipes-kernel/linux/linux-imx.inc
+		1-3-2. sources/poky/meta/recipes-kernel/linux/linux-dtb.inc
+			inherit kernel 
+				fsl-kernel-localversion 
+				fsl-vivante-kernel-driver-handler
+			1-3-1-1. sources/poky/meta/classes/kernel.bbclass
+			1-3-1-2. sources/meta-fsl-arm/classes/fsl-kernel-localversion.bbclass
+			1-3-1-3. sources/meta-fsl-arm/classes/fsl-vivante-kernel-driver-handler.bbclass
+			
+	bitbake core-image-minimal 
+	2-1. ./poky/meta/recipes-core/images/core-image-minimal.bb
+		IMAGE_INSTALL = "packagegroup-core-boot run-postinsts"
+		LICENSE = "MIT"
+		inherit core-image	(./poky/meta/classes/core-image.bbclass)
+		2-1-1 ./poky/meta/classes/core-image.bbclass
+			FEATURE_PACKAGES_ssh-server-dropbear = "packagegroup-core-ssh-dropbear"
+			IMAGE_FEATURES_REPLACES_ssh-server-openssh = "ssh-server-dropbear"
+			IMAGE_INSTALL ?= "packagegroup-core-boot packagegroup-base-extended"
+			inherit image	(./poky/meta/classes/image.bbclass)
+			2-1-1-1. ./poky/meta/classes/image.bbclass
+					inherit rootfs_${IMAGE_PKGTYPE}  (rootfs_tar/ rootfs_rpm ?)
+					inherit populate_sdk_ext
+				
+					inherit 	gzipnative
+
+/*------------------------------------------------------------------------------------20170208*/
+ADLINK Yocto 的 configuration modify
+	1. disable kernel local version.
+		General setup  ---> [ ] Automatically append version information to the version string
+	2. disable snd_mtpav / snd_mpu401
+		Device Drivers  ---> <*> Sound card support  --->  <*>   Advanced Linux Sound Architecture  --->
+		[*]   Generic sound devices  --->  	< >   MOTU MidiTimePiece AV multiport MIDI
+							< >   Generic MPU-401 UART driver
+	3. update
+		git checkout -b imx6dl-adlink-abb	(由現在的環境為基礎, 建立新的 branch )
+		git push origin imx6dl-adlink-abb	(遠端倉庫名) (分支名)
+	4. patch
+		diff --exclude=".*" -Naur kernel-source linux-rtx > kernel.patch
+		diff --exclude=".*" -Naur u-boot-imx u-boot-rtx > uboot.patch	
+		diff --exclude=".*" --exclude="*.pyc" -Naur sources sources_rtx > sources.patch
+		(忽略 .* 相關檔案, 前原kernel-source 修改後linux-rtx)
+  		patch -p0 < kernel.patch (確定OK)	patch -R -p0 < kernel.patch (還原)
+		patch -p0 < uboot.patch (確定OK)	patch -R -p0 < uboot.patch (還原)	
+/*------------------------------------------------------------------------------------20170213*/
+PICO EMI/ESD -> EMI_20170213
+	TEST_LAN
+	TEST_HDMI
+	TEST_USB
+	TEST_UART1
+	TEST_UART5
+/*------------------------------------------------------------------------------------20170215*/
+ubuntu install gpu  issue (chase 說的, 未印證)
+	1. base file system apt-get install mesa....dev (3d opengl es es2)  (先裝, 後裝會覆寫其他 ) 
+	2. fix path/ link ( usr/lib/am../   mesa   libGL.so libEGL.so ...) 砍掉mesa  
+	3. rebuild GPU package 會重建. mesa link.
+	關於 firmware部份的處理.
+	1. kernel out/lib/firmwork 先copy. base
+	2. apt-get install linux-firmware. install
+	3. firmware-imx 解開再update. final
+/*------------------------------------------------------------------------------------20170215*/
+Q7 - compare files (更改客戶console輸出)
+	1. 把客戶系統取出.
+		dd if=/dev/mmcblk0 of=/mnt/sda2/Q7_customer.bin bs=512 count=2
+		dd if=/dev/mmcblk0boot0 of=/mnt/sda2/Q7_customer.bin bs=1k seek=1 skip=1 count=1024 
+		(input來源skip 1k, output目的seek 1k, size大小1M)
+		dd if=/dev/mmcblk0 of=/mnt/sda2/Q7_customer.bin bs=1k seek=786 skip=786 count=1024	
+		(dd u-boot parameter size=1M)
+		dd if=/dev/mmcblk0 of=/mnt/sda2/Q7_customer.bin bs=1M seek=1 skip=1
+	2. 確定bin系統內容.
+		fdisk Q7_customer.bin	: 可知道partition的切割.
+		所用裝置 開機      	開始         結束      	區塊   	識別號  系統
+		Q7_customer.bin1            7936      135999       64032    e  W95 FAT16 (LBA)
+		Q7_customer.bin2          136000     5634175     2749088   83  Linux
+		Q7_customer.bin3         5634176     7389183      877504   83  Linux
+	3. 嘗試掛載,Check內容.
+  		3-1. sudo losetup -f
+  		3-2. sudo losetup -o 4063232 /dev/loop0 Q7_customer.bin	(7936 * 512 = 4063232)
+		3-3. sudo mount /dev/loop0 /mnt/	=> bmp.bin/ logo.bmp/ uImage
+		3-4. sudo umount /dev/loop0		(卸載)
+		3-5. sudo losetup -d /dev/loop0		(釋放)
+		
+		3-6. sudo losetup -o 69632000 /dev/loop0 Q7_customer.bin	(136000 * 512 = 69632000)
+		3-7. sudo mount /dev/loop0 /mnt/	=> file system
+		
+		3-8. sudo losetup -o 2884698112 /dev/loop0 Q7_customer.bin	(5634176 * 512 = 2884698112)
+		3-9. sudo mount /dev/loop0 /mnt/	=> file system
+	4. 把Bin檔,傳到實驗EMMC0(另一片)
+		4-1. echo 0 > /sys/block/mmcblk0boot0/force_ro
+		4-2. dd if=Q7_customer.bin of=/dev/mmcblk0boot0 bs=1k seek=1 skip=1 count=1024
+		4-3. echo 1 > /sys/block/mmcblk0boot0/force_ro
+		4-4. dd if=Q7_customer.bin of=/dev/mmcblk0
+	5. 使用sdcard開機後, 使用fatload mmc 3:1 0x10800000 uImage	(mmc device 0, partition 1, load 0x10800000, uImage)
+		5-1. fatls mmc 3:1   => bmp.bin/ logo.bmp/ uImage
+		5-2. mmc dev 3
+		5-3. fatload mmc 3:1 0x10800000 /uImage
+		5-4. 回過頭來check, 已經知道能動...該如何由rtx-uboot, 切到icom-system
+			5-4-1. rtx-uboot 啟動, 進入uboot
+			5-4-2. 輸入..
+				mmc dev 3; fatload mmc 3:1 0x10800000 /uImage; fatload mmc 3:1 0x3C000000 /bmp.bin
+				setenv bootargs console=ttymxc0,115200 mem=932MB quiet root=/dev/mmcblk0p2 rootfstype=ext4 rootwait rw
+				bootm
+	6. 使用Uart5輸出console. 哇..原來本來就有輸出..
+/*------------------------------------------------------------------------------------20170215*/
+repo status : 查閱每個project update狀況.
+	project sources/meta-fsl-arm/                   branch imx6dl-adlink-abb
+	project sources/meta-fsl-bsp-release/           branch imx6dl-adlink-abb
+	project sources/meta-rtx-arm/                   branch IMX6-PITX
+
+/*------------------------------------------------------------------------------------20170216*/
+ADLINK - Wdog 動作.
+	1. MX6QDL_PAD_DISP0_DAT9__WDOG2_B	0x80000000	//設定WDOG2 PING腳
+	2. enable wdg function
+	 	&wdog1 {
+			status = "disabled";
+			};
+		&wdog2 {
+			pinctrl-names = "default";
+			fsl,wdog_b;
+			status = "okay";
+		};
+	3. check
+		3-1. 使用 wdctl command
+			wdctl -s 10		(設定 10 sec)
+			echo a > /dev/watchdog	(enable watchdog)
+			echo V > /dev/watchdog  (disable watchdog)
+		3-2. 透過 reboot command
+/*------------------------------------------------------------------------------------20170216*/
+ADLINK - 
+	python-pygtk
+	python-importlib
+	MACHINE_EXTRA_RRECOMMENDS_append_mx6 = " python-pygtk python-importlib "
+	packagegroup-self-hosted.bb => fsl-image-abb.bb
+/*------------------------------------------------------------------------------------20170221*/	
+ADLINK-MP
+	fsl-image-abb.bb	: 	IMAGE_INSTALL += " python-pygtk \
+	變更 MP UI 測試
+	Icon : 	/usr/share/applications/mp_tools.desktop
+		/usr/share/icons/Sato/64x64/apps/mp.png
+		/usr/bin/mp_sl
+		~/.mp-log/default.py	default.log
+		~/.mp-log/mp_result.py	mp_result.log
+	mp_01.bb
+		
+/*------------------------------------------------------------------------------------20170220*/
+PC系統安裝 synaptic : python-gtk2-dev (直接在PC測試)
+	python hello.py		(非執行檔,可用這樣執行)
+	./mp-tools.py		(可直接執行)
+	變更原ubuntu的UI MP程式,到Yocto
+	from gi.repository import Gtk,GObject,GdkX11 (用import gtk 及import gobject取代)
+	相關參數都要變更及取代掉.
+/*------------------------------------------------------------------------------------20170216*/
+Ubuntu Core
+	sudo apt-get install snapd
+/*------------------------------------------------------------------------------------20170224*/
+WM - MKSD update bin to board
+	
+/*------------------------------------------------------------------------------------20170216*/
+ADLINK-ABB 開會注意事項,
+	1. Bin File BSP, MFG
+	2. MP 
+		2-1. Error Code
+		2-2. Server Log 放置位置
+		2-3. MP 放SDcard/EMMC
+	3. 測試方式變更嗎?
+
+MP - Console 
+	./efm32cmd 2 12 -v
+	cat /etc/version
+	./rtx_setting -write mac 0 223456789099 mp
+	./rtx_setting -write serialno RTX0000000001 mp
+/*------------------------------------------------------------------------------------20170301*/	
+chmod -R 755 folder
+chown -R rtx-3110:rtx-3110 folder
+
+ftpget -u username -p password IPADDRESS destination sources
+ftpput -u username -p password IPADDRESS destination sources
+
+fuser -m -k /run/media/sda1	(umount : target is busy)
+umount /dev/sda1
+/*------------------------------------------------------------------------------------20170307*/
+ubuntu抓圖軟體 : scrot
+	scrot -s file		 抓取滑鼠所選取的畫面
+
+/*------------------------------------------------------------------------------------20170307*/
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Hardware information :
+	cat /proc/iomem		-	check iomem
+	static lshw
+yocto server 要update
+ntpdate or ntpdate-sync
+WM - MP/RUNIN
+uboot frequence / imx6 detail infomation
+
+
+MP Tool
+gstreme..
+
+/*--------------------------------------------------------------------------------------------*/
+GAME 
+install libsdl2-mixer-2.0-0
+/*--------------------------------------------------------------------------------------------*/
+/*--------------------------------------------------------------------------------------------*/
+/*--------------------------------------------------------------------------------------------*/
+/*--------------------------------------------------------------------------------------------*/
+/*--------------------------------------------------------------------------------------------*/
+/*--------------------------------------------------------------------------------------------*/
+/*--------------------------------------------------------------------------------------------*/
+/*--------------------------------------------------------------------------------------------*/
+/*--------------------------------------------------------------------------------------------*/
+/*--------------------------------------------------------------------------------------------*/
+/*--------------------------------------------------------------------------------------------*/
+/*--------------------------------------------------------------------------------------------*/
+/*--------------------------------------------------------------------------------------------*/
+/*--------------------------------------------------------------------------------------------*/
+/*--------------------------------------------------------------------------------------------*/
+/*--------------------------------------------------------------------------------------------*/
+/*--------------------------------------------------------------------------------------------*/
+/*--------------------------------------------------------------------------------------------*/
+/*--------------------------------------------------------------------------------------------*/
+/*--------------------------------------------------------------------------------------------*/
+/*--------------------------------------------------------------------------------------------*/
+/*--------------------------------------------------------------------------------------------*/
+/*--------------------------------------------------------------------------------------------*/
+/*--------------------------------------------------------------------------------------------*/
+/*--------------------------------------------------------------------------------------------*/
