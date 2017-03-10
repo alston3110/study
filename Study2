@@ -1446,10 +1446,14 @@ umount /dev/sda1
 ubuntu抓圖軟體 : scrot
 	scrot -s file		 抓取滑鼠所選取的畫面
 
-/*------------------------------------------------------------------------------------20170307*/
+/*------------------------------------------------------------------------------------20170310*/
+GitHub : https://github.com/alston3110
+1. GitHub : 註冊建立 帳號 alston3110, New 一個 Repository!!
+2. GitHub : Add ssh key (~/.ssh/*.pub 複製過去)
+3. git clone git@github.com:alston3110/start.git  (download git)
+4. git push origin master	(push to master)
 
-
-
+/*------------------------------------------------------------------------------------20170310*/
 
 
 
