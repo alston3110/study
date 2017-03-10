@@ -1,0 +1,27 @@
+#!/bin/sh
+
+while true ;do
+	for i in 89 101
+		do
+			if [ ! -d /sys/class/gpio/gpio$i ]; then
+				echo $i > /sys/class/gpio/export
+				echo in > /sys/class/gpio/gpio$i/direction
+			fi
+
+		PING="-------"
+		if [ $i = 89 ]; then
+			PING="DSR"
+		fi
+		if [ $i = 101 ]; then
+			PING="RIO"
+		fi
+
+		if [ $(cat /sys/class/gpio/gpio$i/value) = 1 ]; then
+			echo "gpio$i($PING) value = 1" > /dev/ttymxc3
+		else
+			echo "gpio$i($PING) value = 0" > /dev/ttymxc3
+		fi
+	done
+	sleep 1
+done
+

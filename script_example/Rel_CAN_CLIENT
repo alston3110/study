@@ -1,0 +1,55 @@
+#!/bin/sh
+result=0
+retry=0
+if [ $(ifconfig | grep "can" | wc -l) -eq 0 ]; then 
+	ip link set can0 up type can bitrate 125000	
+fi
+
+cansend can0 500#1E.10.10
+cansniffer can0 >> pp.log &
+sleep 5 
+
+while [ -d /proc/$1 ]; do
+
+	if [ $(cat pp.log | grep "1E.10.10" | wc -l) -gt 1 ]; then
+		pid=$(ps ax | grep "cansniffer can0" | grep -v grep | awk '{print $1}')
+		kill $pid
+		rm pp.log
+		sync
+		result=1
+		cansend can0 500#1E.10.10
+		cansniffer can0 >> pp.log &
+	fi
+
+	if [ $result -eq 1 ]; then
+		echo "$2.CAN $3 : PASS"	| tee -a $4	
+		result=0
+		retry=0
+	else
+		echo "$2.CAN $3 : Wait Response" | tee -a $4
+		retry=$(expr $retry + 1)
+	fi
+
+	pid=$(ps ax | grep "cansniffer can0" | grep -v grep | awk '{print $1}')
+	if [ $retry -gt 9 ] && [ -n $pid ]; then
+		echo "CanBus retry"
+		kill $pid 
+		sync
+		sleep 20
+	elif [ -n $pid ]; then
+		cansend can0 500#1E.10.10
+	else
+                cansend can0 500#1E.10.10
+                cansniffer can0 >> pp.log &
+	fi
+	sleep 10 
+done
+
+rm pp.log
+sync
+
+echo "$2.disable Rel_CAN_Client" | tee -a $4
+sync
+
+exit 0
+ 

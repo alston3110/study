@@ -1,0 +1,48 @@
+#!/bin/sh
+
+func_LEDExport() {
+	for i in 17 4 5 8 18
+	do
+		if [ ! -d /sys/class/gpio/gpio$i ]; then
+			echo $i > /sys/class/gpio/export
+#			echo out > /sys/class/gpio/gpio$i/direction
+		fi
+	done
+}
+
+func_LEDUnexport() {
+	for i in 17 4 5 8 18
+	do
+		if [ -d /sys/class/gpio/gpio$i ]; then
+			echo $i > /sys/class/gpio/unexport
+		fi
+	done
+}
+
+func_LEDOn() {
+	for i in 17 4 5 8 18
+	do
+		echo 1 > /sys/class/gpio/gpio$i/value
+	done
+}
+
+func_LEDOff() {
+	for i in 17 4 5 8 18
+	do
+	    	echo 0 > /sys/class/gpio/gpio$i/value
+	done
+}
+
+func_LEDonoff() {
+	while true ;do
+		func_LEDOn
+		sleep 1
+		func_LEDOff
+		sleep 1
+	done
+}
+
+func_LEDExport
+func_LEDonoff
+
+

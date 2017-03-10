@@ -1,0 +1,35 @@
+#!/bin/sh
+echo "Start PCBA_Function_Test = Usb test "
+
+for USB in a1 b1 c1 d1
+do
+
+if [ $(ls /dev/sd$USB 2> /dev/null | wc -l) = 0 ]; then
+	echo "USB /dev/sd$USB : no device "
+	continue	
+fi
+if [ $(mount | grep "/dev/sd$USB on /mnt/sd$USB" | wc -l) = 0 ]; then
+	if [ $( ls /mnt/sd$USB 2> /dev/null | wc -l) = 0 ]; then 
+		mkdir -p /mnt/sd$USB
+	fi
+	mount /dev/sd$USB /mnt/sd$USB
+fi
+
+if [ ! -d /mnt/sd$USB/USB_TEST ]; then
+	mkdir /mnt/sd$USB/USB_TEST
+	chmod 755 /mnt/sd$USB/USB_TEST
+	sync
+fi
+
+echo $(date) > /mnt/sd$USB/USB_TEST/USB_date
+
+
+if  [ -f /mnt/sd$USB/USB_TEST/USB_date ];then
+	echo "USB $USB : PASS"
+else
+	echo "USB $USB : ...."
+fi		
+sleep 2
+sync
+
+done

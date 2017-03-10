@@ -1,0 +1,76 @@
+#!/bin/bash
+
+. ./tools/info_config
+
+result=0
+count=3
+#timesync=0
+#allcount=0
+#curcount=0
+dev_name=eth0 
+
+if [ -z ${ping_addr} ]; then
+    ping_addr="8.8.8.8"
+fi
+
+echo "Ping $ping_addr"
+
+if [ -f ./tools/log/${dev_name}.log ]; then
+	rm ./tools/log/${dev_name}.log
+fi
+
+if [ $(ifconfig | grep ${dev_name} | wc -l) = 0 ]; then
+	ifconfig ${dev_name} up 
+	sleep 18 
+	if [ $(ifconfig | grep ${dev_name} | wc -l) = 0 ]; then
+		echo "ETH ${dev_name}   : no device"
+		exit 0
+	else
+		udhcpc -i ${dev_name} & 
+		sleep 10	
+	fi	
+fi
+
+ip=$(ifconfig ${dev_name} 2>/dev/null|awk '/inet addr:/ {print $2}'|sed 's/addr://')
+
+
+for (( i=0 ; ${i}<${count} ; i++ ))
+do
+	if [ "$(ifconfig ${dev_name} | awk 'sub(/inet addr:/,""){print $1}' | wc -l)" -eq "0" ]; then
+		pid=$(ps ax | grep "udhcpc -i ${dev_name}" | grep -v grep | awk '{print $1}')
+		if [ -z $pid ]; then
+			udhcpc -i ${dev_name} &
+			sleep 10
+		else
+			echo "ETH ${dev_name}   : no link"
+			break
+		fi
+	else
+            if [ "$(ping -I ${dev_name} -w 5 ${ping_addr} | grep ${ping_addr} | wc -l)" -gt "2" ];then
+                result=1
+	        break
+            fi
+            sleep 3
+        fi
+done
+
+for (( i=0 ; ${i}<${count} ; i++ ))
+do  
+	pid=$(ps ax | grep "udhcpc -i ${dev_name}" | grep -v grep | awk '{print $1}' | sed q)
+	if [ ! -z $pid ]; then
+		kill $pid
+	else
+		break
+	fi
+done
+
+echo "${dev_name} = $result" > ./tools/log/${dev_name}.log
+    
+if [ ${result} -gt 0 ]; then
+	echo "ETH ${dev_name} : PASS"
+else
+        echo "ETH ${dev_name} : FAIL"
+fi
+
+exit ${result}
+

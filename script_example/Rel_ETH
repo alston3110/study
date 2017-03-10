@@ -1,0 +1,45 @@
+#!/bin/sh
+
+if [ $(ifconfig | grep "$3" | wc -l) = 0 ]; then
+	ifconfig $3 up 
+fi
+
+udhcpc -i $3 &
+#dhclient $3 &
+
+sleep 10 
+
+ip=$(ifconfig $3 | awk 'sub(/inet addr:/,""){print $1}')
+if [ -n $ip ]; then
+	target=${ip%.*}.1
+else
+	target=192.168.1.1
+fi	
+
+while [ -d /proc/$1 ]; do
+
+        pid=$(ps ax | grep "udhcpc -i $3" | grep -v grep | awk '{print $1}' | sed '2,$d')
+	if [ ! -z $pid ]; then
+		echo " kill pid=$pid " | tee -a $4 
+       		kill $pid
+        	echo "ETH $3   : no link" | tee -a $4 
+	fi
+
+	if [ "$(ping -I $3 -w 5 $target | grep $target | wc -l)" -gt "2" ];then
+		echo "$2.ETH $3 : PASS" | tee -a $4
+	else
+		echo "$2.ETH $3 : ...." | tee -a $4
+	fi
+	
+sleep 5
+done
+
+pid=$(ps ax | grep "udhcpc -i $3" | grep -v grep | awk '{print $1}' | sed '2,$d')
+if [ ! -z $pid ]; then
+	echo " kill pid=$pid " | tee -a $4
+	kill $pid
+fi
+
+echo "$2.disable Rel_ETH" | tee -a $4
+sync
+

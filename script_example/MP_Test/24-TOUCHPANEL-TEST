@@ -1,0 +1,7 @@
+#!/bin/sh
+
+while true ;do
+	cat /sys/class/input/input1/xy > /dev/ttymxc3
+	sleep 1
+done
+

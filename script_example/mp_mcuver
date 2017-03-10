@@ -1,0 +1,58 @@
+#!/bin/bash
+
+. ./tools/info_config
+
+result=0
+count=5 
+ethres=0
+retval=0
+
+efm32cmd=`ls ./tools/efm32cmd*`
+#PDATE_MCU="TRUE"
+
+if [ -z ${MCU_VER} ]; then
+    MCU_VER="03170110"
+fi
+
+if [ "$efm32cmd"x != x ]; then
+    echo "efm32 command is $efm32cmd"
+    for (( i=0 ; ${i}<${count} ; i++ ))
+    do    
+    	efmver=$($efm32cmd 2 12 -v | awk 'sub(/Version:/,""){print $1}')
+    	if [ -z $efmver ]; then
+        	echo "efm32 get version command fail."
+    	else
+    		echo "efm32 version is $efmver"
+        	if [ "$efmver" == ${MCU_VER} ]; then
+            		result=1
+			break
+        	elif [ "${UPDATE_MCU}x" = "TRUEx" ]; then
+            		echo "efm32 updating......"
+            		$efm32cmd 2 12 -u
+            		sleep 1
+            		$efm32cmd 2 12 -u
+            		sleep 1
+    	    		efmver=$($efm32cmd 2 12 -v | awk 'sub(/Version:/,""){print $1}')
+            		echo "efm32 update version is $efmver"
+            		if [ "$efmver" == ${MCU_VER} ]; then
+                		result=1
+				break
+            		fi
+        	fi
+    	fi
+	sleep 3
+    done
+
+    if [ ${result} -gt 0 ]; then
+        retval=1
+        CheckSyncTime=`date +"%Y"`
+        if [ $CheckSyncTime -gt 2015 ]; then
+            hwclock -w
+            retval=2
+        fi
+    fi
+
+fi
+
+
+exit $retval

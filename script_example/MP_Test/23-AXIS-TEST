@@ -1,0 +1,10 @@
+#!/bin/sh
+
+while true ;do
+	if [ ! $(cat /sys/class/input/input2/enable) = 1 ]; then
+		echo 1 > /sys/class/input/input2/enable
+	fi
+	cat /sys/class/input/input2/xyz > /dev/ttymxc3
+	sleep 1
+done
+

@@ -1,0 +1,781 @@
+#!/bin/sh
+
+DIR=$0
+NEWDIR=${DIR%MP_Test}
+cd $NEWDIR
+. $(pwd)/MP_Test_config
+. $(pwd)/MP_Test_FUNCTION
+klevel="${1:-4}"
+echo "$klevel 4 1 7" > /proc/sys/kernel/printk
+
+func_Buzzer() {
+	case "$HOSTNAME" in
+		AEG-200)
+			case "$1" in
+			1)	func_LEDExport "67 68 69 71"
+				func_LEDOn "67 68 69 71"
+				func_LEDUnexport "67 68 69 71"
+				;;
+			2)	func_LEDExport "67 68 69 71"
+				func_LEDOn " 71"
+				func_LEDOff "67 68 69"
+				func_LEDUnexport "67 68 69 71"
+				exit 0
+				;;
+			3)	func_LEDExport "67 68 69 71"
+				func_LEDOn "71"
+				func_LEDOff "67 68 69"
+				func_LEDUnexport "67 68 69 71"
+				func_EXIT > /dev/null 2>&1
+				exit 0
+				;;
+			esac
+			;;
+		BISHOP)
+			case "$1" in
+			1)echo 128 > /sys/class/backlight/pwm-backlight.1/brightness
+				usleep 100000
+				echo 0 > /sys/class/backlight/pwm-backlight.1/brightness
+				;;
+			2)	for i in 1 1 1
+				do
+					echo 128 > /sys/class/backlight/pwm-backlight.1/brightness
+					usleep 200000
+					echo 0 > /sys/class/backlight/pwm-backlight.1/brightness
+					usleep 100000
+				done
+				func_LEDExport "17 21 102 100 104 105 106 107 108 109 110 101"
+				func_LEDOn "21 102 104 106 109 110" #func_RedLEDOn
+				func_LEDUnexport "17 21 102 100 104 105 106 107 108 109 110 101"
+				exit 0
+				;;
+			3)	for i in 1 1 1
+				do
+					echo 128 > /sys/class/backlight/pwm-backlight.1/brightness
+					usleep 200000
+					echo 0 > /sys/class/backlight/pwm-backlight.1/brightness
+					usleep 100000
+				done
+				func_LEDExport "17 21 102 100 104 105 106 107 108 109 110 101"
+				func_LEDOn "21 102 104 106 109 110" #func_RedLEDOn
+				func_LEDUnexport "17 21 102 100 104 105 106 107 108 109 110 101"
+				func_EXIT > /dev/null 2>&1
+				exit 0
+				;;
+			esac
+			;;
+	esac
+}
+
+func_type() {
+	case "$HOSTNAME" in
+		AEG-200)
+			type="AEG-200"
+			modellength=17
+			count1n="${count1n:-count}"
+			count2n="${count2n:-wifi}"
+			count3n="${count3n:-sdcard}"
+			count4n="${count4n:-mem}"
+			count5n="${count5n:-rtc}"
+			;;
+		BISHOP)
+			modellength=11
+			count1n="${count1n:-count}"
+			count2n="${count2n:-wifi}"
+			count3n="${count3n:-bt}"
+			count4n="${count4n:-mem}"
+			count5n="${count5n:-NA}"
+			func_LEDExport "46 47"
+			if [ $(cat /sys/class/gpio/gpio46/value) = 0 ] && [ $(cat /sys/class/gpio/gpio47/value) = 1 ]; then
+				type="TYPE-A-101"
+			fi
+			if [ $(cat /sys/class/gpio/gpio46/value) = 0 ] && [ $(cat /sys/class/gpio/gpio47/value) = 0 ]; then
+				type="TYPE-B-102"
+			fi
+			if [ $(cat /sys/class/gpio/gpio46/value) = 1 ] && [ $(cat /sys/class/gpio/gpio47/value) = 1 ]; then
+				type="TYPE-C-103"
+			fi
+			if [ $(cat /sys/class/gpio/gpio46/value) = 1 ] && [ $(cat /sys/class/gpio/gpio47/value) = 0 ]; then
+				type="TYPE-D-104"
+			fi
+			func_LEDUnexport "46 47"
+			;;
+		Wrapping_Machine)
+#Wrapping_Machine MP Test
+			type="Wrapping_Machine"
+			modellength=11
+			count1n="${count1n:-count}"
+			count2n="${count2n:-NA}"
+			count3n="${count3n:-NA}"
+			count4n="${count4n:-NA}"
+			count5n="${count5n:-NA}"
+			;;
+		*)
+			echo Wrong model...
+			echo Please replace the model or update code.
+			exit 0
+			;;
+	esac
+}
+
+func_model() {
+	model_ln=0
+	modeltimes=1
+	while [ ! $model_ln = $modellength ] && [ ! $modeltimes = $Mactimes ]; do
+		echo -e "\n[1] Please input Machine Model"
+		read model
+
+		if [ "$model" = "exit" ];then
+			exit 0
+		fi
+
+		model_ln=$(echo $model | wc -c)
+
+		if [ ! $model_ln = $modellength ]; then
+			modeltimes=$(expr $modeltimes + 1)
+			if [ $modeltimes = $Mactimes ]; then
+				echo "Incorrectly three times"
+				model="${model:-NULL}"
+				button=$(ls ./ | grep $model | wc -l)
+				model="$model"-"$button".log
+#				echo "0.a.S/N Format" >> ./"$model"
+				error="0.a.Fail "
+				echo "0.a.S/N Format= Fail" >> ./"$model"
+				func_Buzzer 2
+			else
+				echo "Format error. Please try again."
+			fi
+		fi
+	done
+	echo "[$model] is the Machine Model [$type]"
+	model_ln=0
+	modeltimes=1
+}
+
+func_Ethaddr_LAN9514() {
+	ethaddr_ln=0
+	ethtimes=1
+	while [ ! $ethaddr_ln = 18 ] && [ ! $ethtimes = $Mactimes ]; do
+		echo "[2] Please scan [$model] Machine [LAN9514_ETHERNET] Mac_addr $ethtimes times"
+		read ethaddr_lan9514
+
+		if [ "$ethaddr_lan9514" = "exit" ];then
+			exit 0
+		fi
+
+		ethaddr0=${ethaddr_lan9514:0:2}
+		ethaddr1=${ethaddr_lan9514:2:2}
+		ethaddr2=${ethaddr_lan9514:4:2}
+		ethaddr3=${ethaddr_lan9514:6:2}
+		ethaddr4=${ethaddr_lan9514:8:2}
+		ethaddr5=${ethaddr_lan9514:10:2}
+		ethaddr_lan9514=$ethaddr0:$ethaddr1:$ethaddr2:$ethaddr3:$ethaddr4:$ethaddr5
+
+		ethaddr_ln=$(echo $ethaddr_lan9514 | wc -c)
+
+		if [ ! $ethaddr_ln = 18 ]; then
+			ethtimes=$(expr $ethtimes + 1)
+			if [ $ethtimes = $Mactimes ]; then
+				echo "Incorrectly three times"
+				button=$(ls ./ | grep $model | wc -l)
+				model="$model"-"$button".log
+#				echo "0.b.Ethernet Mac_addr" >> ./"$model"
+				error="0.b.Fail "
+				echo "0.b.Ethernet Mac_addr= Fail" >> ./"$model"
+				func_Buzzer 2
+			else
+				echo "Format error. Please try again."
+			fi
+		else
+			ethtool -E eth1 magic 0x9500 offset 1 value 0x$ethaddr0
+			ethtool -E eth1 magic 0x9500 offset 2 value 0x$ethaddr1
+			ethtool -E eth1 magic 0x9500 offset 3 value 0x$ethaddr2
+			ethtool -E eth1 magic 0x9500 offset 4 value 0x$ethaddr3
+			ethtool -E eth1 magic 0x9500 offset 5 value 0x$ethaddr4
+			ethtool -E eth1 magic 0x9500 offset 6 value 0x$ethaddr5			
+		fi
+	done
+	ethaddr_ln=0
+	ethtimes=1
+}
+
+func_Ethaddr() {
+	ethaddr_ln=0
+	ethtimes=1
+	while [ ! $ethaddr_ln = 18 ] && [ ! $ethtimes = $Mactimes ]; do
+		echo "[2] Please scan [$model] Machine [ETHERNET] Mac_addr $ethtimes times"
+		read ethaddr
+
+		if [ "$ethaddr" = "exit" ];then
+			exit 0
+		fi
+
+		ethaddr0=${ethaddr:0:2}
+		ethaddr1=${ethaddr:2:2}
+		ethaddr2=${ethaddr:4:2}
+		ethaddr3=${ethaddr:6:2}
+		ethaddr4=${ethaddr:8:2}
+		ethaddr5=${ethaddr:10:2}
+		ethaddr=$ethaddr0:$ethaddr1:$ethaddr2:$ethaddr3:$ethaddr4:$ethaddr5
+
+		ethaddr_ln=$(echo $ethaddr | wc -c)
+
+		if [ ! $ethaddr_ln = 18 ]; then
+			ethtimes=$(expr $ethtimes + 1)
+			if [ $ethtimes = $Mactimes ]; then
+				echo "Incorrectly three times"
+				button=$(ls ./ | grep $model | wc -l)
+				model="$model"-"$button".log
+#				echo "0.b.Ethernet Mac_addr" >> ./"$model"
+				error="0.b.Fail "
+				echo "0.b.Ethernet Mac_addr= Fail" >> ./"$model"
+				func_Buzzer 2
+			else
+				echo "Format error. Please try again."
+			fi
+		fi
+	done
+	ethaddr_ln=0
+	ethtimes=1
+}
+
+func_Ethaddr1() {
+	ethaddr_ln=0
+	ethtimes=1
+	while [ ! $ethaddr_ln = 18 ] && [ ! $ethtimes = $Mactimes ]; do
+		echo "[2] Please scan [$model] Machine [ETHERNET] Mac_addr $ethtimes times"
+		read ethaddr
+
+		if [ "$ethaddr" = "exit" ];then
+			exit 0
+		fi
+
+		ethaddr0=${ethaddr:0:2}
+		ethaddr1=${ethaddr:2:2}
+		ethaddr2=${ethaddr:4:2}
+		ethaddr3=${ethaddr:6:2}
+		ethaddr4=${ethaddr:8:2}
+		ethaddr5=${ethaddr:10:2}
+		ethaddr=$ethaddr0:$ethaddr1:$ethaddr2:$ethaddr3:$ethaddr4:$ethaddr5
+
+		ethaddr_ln=$(echo $ethaddr | wc -c)
+
+		if [ ! $ethaddr_ln = 18 ]; then
+			ethtimes=$(expr $ethtimes + 1)
+			if [ $ethtimes = $Mactimes ]; then
+				echo "Incorrectly three times"
+				button=$(ls ./ | grep $model | wc -l)
+				model="$model"-"$button".log
+#				echo "0.b.Ethernet Mac_addr" >> ./"$model"
+				error="0.b.Fail "
+				echo "0.b.Ethernet Mac_addr= Fail" >> ./"$model"
+				func_Buzzer 2
+			else
+				echo "Format error. Please try again."
+			fi
+		fi
+	done
+	ethaddr_ln=0
+	ethtimes=1
+}
+
+func_Btaddr() {
+	btaddr_ln=0
+	bttimes=1
+	while [ ! $btaddr_ln = 20 ] && [ ! $bttimes = $Mactimes ]; do
+		echo "[3] Please scan [$model] Machine [BLUETOOTH] Mac_addr $bttimes times"
+		read btaddr
+		if [ "$btaddr" = "exit" ];then
+			exit 0
+		fi
+
+		btaddr_ln=$(echo $btaddr | wc -c)
+
+		if [ ! $btaddr_ln = 20 ]; then
+			bttimes=$(expr $bttimes + 1)
+			if [ $bttimes = $Mactimes ]; then
+				echo "Incorrectly three times"
+				button=$(ls ./ | grep $model | wc -l)
+				model="$model"-"$button".log
+#				echo "0.c.BT Mac_addr" >> ./"$model"
+				error="0.c.Fail "
+				echo "0.c.BT Mac_addr= Fail" >> ./"$model"
+				func_Buzzer 2
+			else
+				echo "Format error. Please try again."
+			fi
+		fi
+	done
+	btaddr_ln=0
+	bttimes=1
+}
+
+func_check() {
+	if [ ! $(cat /etc/version) = $bspversion ]; then
+#		echo "0.d.BSP_VERSION" >> ./"$model"
+		error="0.d.Fail "
+		echo "0.d.BSP_VERSION= Fail" >> ./"$model"
+		echo "<<< BSP_VERSION --- $(cat /etc/version)<<<"
+		func_Buzzer 3	
+	fi
+
+	if [ ! $(cat /sys/devices/platform/mcu_efm.0/mcu_version) = $mcuversion ]; then
+#		echo "0.e.MCU_version" >> ./"$model"
+		error="0.e.Fail "
+		echo "0.e.MCU_version= Fail" >> ./"$model"
+		echo "<<< MCU_version --- $(cat /sys/devices/platform/mcu_efm.0/mcu_version)<<<"
+		func_Buzzer 3
+	fi
+	if [ ! $count1 = "NA" ]; then
+		if [ $count1 -lt $maxcount1 ]; then
+#			echo "0.f.runin test count" >> ./"$model"
+			error="0.f.Fail "
+			echo "0.f.runin test count= Fail" >> ./"$model"
+			echo "<<< test count --- $count1<<<"
+			func_Buzzer 3
+		fi
+	fi
+	if [ ! $count2 = "NA" ]; then
+		if [ $count2 -gt $maxcount2 ]; then
+#			echo "0.g.runin test $count2n-count" >> ./"$model"
+			error="0.g.Fail "
+			echo "0.g.runin test $count2n-count= Fail" >> ./"$model"
+			echo "<<< test $count2n-count --- $count2<<<"
+			func_Buzzer 3
+		fi
+	fi
+	if [ ! $count3 = "NA" ]; then
+		if [ $count3 -gt $maxcount3 ]; then
+#			echo "0.h.runin test $count3n-count" >> ./"$model"
+			error="0.h.Fail "
+			echo "0.h.runin test $count3n-count= Fail" >> ./"$model"
+			echo "<<< test $count3n-count --- $count3<<<"
+			func_Buzzer 3
+		fi
+	fi
+	if [ ! $count4 = "NA" ]; then
+		if [ $count4 -gt $maxcount4 ]; then
+#			echo "0.i.runin test $count4n-count" >> ./"$model"
+			error="0.i.Fail "
+			echo "0.i.runin test $count4n-count= Fail" >> ./"$model"
+			echo "<<< test $count4n-count --- $count4<<<"
+			func_Buzzer 3
+		fi
+	fi
+
+	if [ ! $count5 = "NA" ]; then
+		if [ $count5 -gt $maxcount5 ]; then
+#			echo "0.i.runin test $count5n-count" >> ./"$model"
+			error="0.j.Fail "
+			echo "0.j.runin test $count5n-count= Fail" >> ./"$model"
+			echo "<<< test $count5n-count --- $count5<<<"
+			func_Buzzer 3
+		fi
+	fi
+}
+
+func_finish() {
+	if [ $type = "Wrapping_Machine" ]; then
+		if [ $(cat ./"$model" | wc -l ) = 18 ] && [ $(cat ./"$model" | grep Pass | wc -l ) = 15 ] && [ $(cat ./"$model" | grep Fail | wc -l ) = 0 ]; then
+			/usr/bin/rtx_setenv --set Fac_Test=Finish
+			func_EXIT > /dev/null 2>&1
+			echo "MP Test Finish"
+			exit 0
+		fi
+	fi
+	if [ $type = "AEG-200" ]; then
+		if [ $(cat ./"$model" | wc -l ) = 13 ] && [ $(cat ./"$model" | grep Pass | wc -l ) = 10 ] && [ $(cat ./"$model" | grep Fail | wc -l ) = 0 ]; then
+			/usr/bin/rtx_setenv --set ethaddr
+			/usr/bin/rtx_setenv --set fec_addr
+			/usr/bin/rtx_setenv --set Eth_Mac=$ethaddr
+			/usr/bin/rtx_setenv --set Fac_Test=Finish
+			func_EXIT > /dev/null 2>&1
+			reboot
+			echo "Finish and reboot"
+			exit 0
+		fi
+	fi
+	if [ $type = "TYPE-A-101" ]; then
+		func_LEDExport "17 21 102 100 104 105 106 107 108 109 110 101"
+		func_LEDOn "17 100 105 107 108 101" #func_GreenLEDOn
+		func_LEDUnexport "17 21 102 100 104 105 106 107 108 109 110 101"
+		if [ $(cat ./"$model" | wc -l ) = 12 ] && [ $(cat ./"$model" | grep Pass | wc -l ) = 9 ] && [ $(cat ./"$model" | grep Fail | wc -l ) = 0 ]; then
+#			/usr/bin/rtx_setenv --set ethaddr
+#			/usr/bin/rtx_setenv --set fec_addr
+#			/usr/bin/rtx_setenv --set Eth_Mac=$ethaddr
+			/usr/bin/rtx_setenv --set Fac_Test=Finish
+			func_EXIT > /dev/null 2>&1
+#			reboot
+			echo "MP Test Finish."
+			exit 0
+		fi
+	fi
+	if [ $type = "TYPE-B-102" ]; then
+		func_LEDExport "17 21 102 100 104 105 106 107 108 109 110 101"
+		func_LEDOn "17 100 105 107 108 101" #func_GreenLEDOn
+		func_LEDUnexport "17 21 102 100 104 105 106 107 108 109 110 101"
+		if [ $(cat ./"$model" | wc -l ) = 14 ] && [ $(cat ./"$model" | grep Pass | wc -l ) = 11 ] && [ $(cat ./"$model" | grep Fail | wc -l ) = 0 ]; then
+#			/usr/bin/rtx_setenv --set ethaddr
+#			/usr/bin/rtx_setenv --set fec_addr
+#			/usr/bin/rtx_setenv --set Eth_Mac=$ethaddr
+			/usr/bin/rtx_setenv --set Fac_Test=Finish
+			func_EXIT > /dev/null 2>&1
+#			reboot
+			echo "MP Test Finish."
+			exit 0
+		fi
+	fi
+	if [ $type = "TYPE-C-103" ]; then
+		func_LEDExport "17 21 102 100 104 105 106 107 108 109 110 101"
+		func_LEDOn "17 100 105 107 108 101" #func_GreenLEDOn
+		func_LEDUnexport "17 21 102 100 104 105 106 107 108 109 110 101"
+		if [ $(cat ./"$model" | wc -l ) = 11 ] && [ $(cat ./"$model" | grep Pass | wc -l ) = 8 ] && [ $(cat ./"$model" | grep Fail | wc -l ) = 0 ]; then
+#			/usr/bin/rtx_setenv --set ethaddr
+#			/usr/bin/rtx_setenv --set fec_addr
+#			/usr/bin/rtx_setenv --set Eth_Mac=$ethaddr
+			/usr/bin/rtx_setenv --set Fac_Test=Finish
+			func_EXIT > /dev/null 2>&1
+#			reboot
+			echo "MP Test Finish."
+			exit 0
+		fi
+	fi
+	if [ $type = "TYPE-D-104" ]; then
+		func_LEDExport "17 21 102 100 104 105 106 107 108 109 110 101"
+		func_LEDOn "17 100 105 107 108 101" #func_GreenLEDOn
+		func_LEDUnexport "17 21 102 100 104 105 106 107 108 109 110 101"
+		if [ $(cat ./"$model" | wc -l ) = 13 ] && [ $(cat ./"$model" | grep Pass | wc -l ) = 10 ] && [ $(cat ./"$model" | grep Fail | wc -l ) = 0 ]; then
+#			/usr/bin/rtx_setenv --set ethaddr
+#			/usr/bin/rtx_setenv --set fec_addr
+#			/usr/bin/rtx_setenv --set Eth_Mac=$ethaddr
+			/usr/bin/rtx_setenv --set Fac_Test=Finish
+			func_EXIT > /dev/null 2>&1
+#			reboot
+			echo "MP Test Finish."
+			exit 0
+		fi
+	fi
+}
+
+func_item() {
+    case "$1" in
+	00) echo -e "\n>>> Start Auto Run !!! >>>"
+		automode=1
+		;;	
+	01) func_LED > /dev/null 2>&1
+		sleep 1
+		;;
+	02) func_A_MODEM > /dev/null 2>&1
+		sleep 1
+		;;
+	03) func_USB > /dev/null 2>&1
+		sleep 1
+		;;
+	04) func_WIFI > /dev/null 2>&1
+		sleep 1
+		;;
+	05) func_3G > /dev/null 2>&1
+		sleep 1
+		;;
+	06) func_GPS > /dev/null 2>&1
+		sleep 1
+		;;
+	07) func_DIP_SWITCH > /dev/null 2>&1
+		sleep 1
+		;;
+	08) func_ETHERNET > /dev/null 2>&1
+		sleep 1
+		;;
+	09) func_BT > /dev/null 2>&1
+		sleep 1
+		;;
+	10) func_RS232 > /dev/null 2>&1
+		sleep 1
+		;;
+	11) func_DDR > /dev/null 2>&1
+		sleep 1
+		;;
+	12) func_SDCARD > /dev/null 2>&1
+		sleep 1
+		;;
+	13) func_GPIO > /dev/null 2>&1
+		sleep 1
+		;;
+	14) func_RS485 > /dev/null 2>&1
+		sleep 1
+		;;
+	15) func_ZIGBEE > /dev/null 2>&1
+		sleep 1
+		;;
+	16) func_CPU > /dev/null 2>&1
+		sleep 1
+		;;
+	17) func_BUZZER > /dev/null 2>&1
+		sleep 1
+		;;
+	20) func_Audio > /dev/null 2>&1
+		sleep 1
+		;;
+	21) func_ETHERNET1 > /dev/null 2>&1
+		sleep 1
+		;;
+	22) func_Lvds > /dev/null 2>&1
+		sleep 1
+		;;
+	23) func_3AXIS > /dev/null 2>&1
+		sleep 1
+		;;
+	24) func_TouchPanel > /dev/null 2>&1
+		sleep 1
+		;;
+	25) func_RTC > /dev/null 2>&1
+		sleep 1
+		;;
+	26) func_HW > /dev/null 2>&1
+		sleep 1
+		;;
+	ETHMAC) echo "Current address [$ethaddr]"
+		func_Ethaddr
+		;;
+	BTMAC) 	echo "Current address [$btaddr]"
+#		func_Btaddr
+		;;
+	qq) 	func_finish
+		func_EXIT > /dev/null 2>&1
+		exit 2
+		sleep 1
+		;;
+    esac
+}
+
+#===========START===========
+
+if [ -f /home/user/runintest ]; then
+	mv /home/user/runintest /home/user/runintest_end
+	sync
+fi
+
+if [ -e /dev/ttyACM0 ]; then
+	echo "AT^SDPORT=3" > /dev/ttyACM0
+fi
+
+#======CHECK_func_type======
+func_type
+
+#======CHECK_Fac_Test=======
+if [ $(/usr/bin/rtx_setenv -l | grep "Fac_Test = Finish" | wc -l ) = 1 ]; then
+	echo "This machine has been tested finished"
+	echo "Do you want to test again? (y/N)"
+	read testagain
+	if [ "$testagain" = y ]; then
+		echo " "	
+	else
+		exit 0
+	fi
+fi
+
+#========CHECK_count========
+if [ -f /etc/count ]; then
+	count1=$(cat /etc/count | grep $count1n | awk '{print $2}')
+	count2=$(cat /etc/count | grep $count2n | awk '{print $2}')
+	count3=$(cat /etc/count | grep $count3n | awk '{print $2}')
+	count4=$(cat /etc/count | grep $count4n | awk '{print $2}')
+	count5=$(cat /etc/count | grep $count5n | awk '{print $2}')
+	count2="${count2:-NA}"
+	count3="${count3:-NA}"
+	count4="${count4:-NA}"
+	count5="${count5:-NA}"
+else
+#	echo "No runin test file."
+#	echo "Do you want to continue(y/N)?"
+#	read testrunin
+#	if [ "$testrunin" = y ]; then
+		count1=NA
+		count2=NA
+		count3=NA
+		count4=NA
+		count5=NA
+#	else
+#		exit 0
+#	fi
+fi
+
+#====CHECK or SET model=====
+if [ $(/usr/bin/rtx_setenv -l | grep "R_Num" | wc -l ) = 1 ]; then
+#	ethline=$(cat /proc/cmdline)
+#	ethaddr=${ethline##*fec_mac=}
+#	ethaddr=$(echo $ethaddr | awk '{print $1}')
+	#======Get internal mmc card ethaddr ============
+	ethaddr=$(rtx_setenv -l | grep 'ethaddr =' | awk '{print $3}') 
+
+	ethaddr10=`ethtool -e eth1 offset 0x01 length 6 | grep '0x0001' | awk '{print $2}'`
+	ethaddr11=`ethtool -e eth1 offset 0x01 length 6 | grep '0x0001' | awk '{print $3}'`
+	ethaddr12=`ethtool -e eth1 offset 0x01 length 6 | grep '0x0001' | awk '{print $4}'`
+	ethaddr13=`ethtool -e eth1 offset 0x01 length 6 | grep '0x0001' | awk '{print $5}'`
+	ethaddr14=`ethtool -e eth1 offset 0x01 length 6 | grep '0x0001' | awk '{print $6}'`
+	ethaddr15=`ethtool -e eth1 offset 0x01 length 6 | grep '0x0001' | awk '{print $7}'`
+	lethaddr=$ethaddr10:$ethaddr11:$ethaddr12:$ethaddr13:$ethaddr14:$ethaddr15
+
+	model=$(/usr/bin/rtx_setenv -l | grep "R_Num" | awk '{print $3}')
+#	sleep 10
+
+	if [ $(/home/user/mmc_2M_Count -l | grep "count = " | wc -l) = 1 ]; then
+		runincount=$(/home/user/mmc_2M_Count -l | grep "count = " | awk '{print $3}')
+	fi
+
+	ifconfig eth0 up
+	udhcpc -b -i eth0
+	sleep 5
+	echo "SYSTEM_TIME[$(date "+%X %Y/%m/%d")]"
+	echo "SERIAL_NUMBER[$model]"
+	echo "Eth_Mac[$ethaddr]"
+	echo "9514_Mac[$lethaddr]"
+	echo "RUNIN_COUNT[$runincount]"
+	echo "BSP_VERSION[$(cat /etc/version)]"
+	echo "MCU_VERSION[$(cat /sys/devices/platform/mcu_efm.0/mcu_version)]"
+	echo run ntpd $ntpdaddr
+	ntpd -q -n -p $ntpdaddr
+	busybox hwclock -w
+else
+
+	func_model
+	func_Ethaddr_LAN9514
+	func_Ethaddr
+
+	/usr/bin/rtx_setenv --set ethaddr=$ethaddr
+	/usr/bin/rtx_setenv --set fec_addr=$ethaddr
+#	if [ ! $(rtx_setenv -l | grep "Mem_Test = Pass" | wc -l) = 1 ]; then
+	/usr/bin/rtx_setenv_mmcblk1 --set Mem_Test=Redo
+#	fi
+
+	/usr/bin/rtx_setenv --set R_Num=$model
+	sync
+	reboot
+	echo "system reboot"
+	sleep 15
+	exit 0
+fi
+
+#=======SET_filename========
+button=$(ls ./ | grep $model | wc -l)
+model="$model"-"$button".log
+echo "[ $type ] $(date "+%Y/%m/%d %X")" >> ./"$model"
+echo "$(cat /etc/version) $(cat /sys/devices/platform/mcu_efm.0/mcu_version) runin= $runincount" >> ./"$model"
+echo "Number= $model Eth_Mac= $ethaddr 9514_Mac= $lethaddr" >> ./"$model"
+
+#=====CHECK_ver & count=====
+func_check
+
+automode=0
+autoruncheck=0
+
+ifconfig eth0 down
+#ifconfig eth1 down
+#ifconfig wlan0 down
+
+#===========while===========
+while true ;do
+	if [ $automode = 0 ]; then
+		echo "Number=[$model] Eth_Mac=[$ethaddr] 9514_Mac=[$lethaddr] $(cat /etc/version) [$(cat /sys/devices/platform/mcu_efm.0/mcu_version)] runin=[$count1] $count2n=[$count2] $count3n=[$count3] $count4n=[$count4] $count5n=[$count5]"
+		case "$type" in
+			Wrapping_Machine)	
+				echo -e "\nInput Test Item : \n01.LED \n03.USB \n04.WIFI \n08.Ethernet0 \n10.RS232 \n11.DDR \n12.SDCARD \n13.GPIO \n20.Audio \n21.Ethernet1 \n22.LVDS \n23.3AXIS \n24.TouchPanel \n25.RTC \n26.HW \n00.AutuRun \nqq.Exit"
+				;;
+			AEG-200)	
+				echo -e "\nInput Test Item : \n1.LED \n3.USB \n4.WIFI \n7.DIP \n8.Ethernet \n11.DDR \n12.SDCARD \n13.GPIO \n14.RS485 \n15.ZIGBEE \n16.CPU \n0.AutuRun \nq.Exit"
+				;;
+			TYPE-A-101)
+				echo -e "\nInput Test Item : \n1.LED \n3.USB \n5.3G \n6.GPS \n7.DIP \n8.Ethernet \n10.RS232 \n11.DDR \n17.BUZZER \n0.AutuRun \nq.Exit"
+				;;
+			TYPE-B-102)
+				echo -e "\nInput Test Item : \n1.LED \n3.USB \n4.WIFI \n5.3G \n6.GPS \n7.DIP \n8.Ethernet \n9.BT \n10.RS232 \n11.DDR \n17.BUZZER \n0.AutuRun \nq.Exit"
+				;;
+			TYPE-C-103)
+				echo -e "\nInput Test Item : \n1.LED \n2.A-MODEM \n3.USB \n7.DIP \n8.Ethernet \n10.RS232 \n11.DDR \n17.BUZZER \n0.AutuRun \nq.Exit"
+				;;
+			TYPE-D-104)
+				echo -e "\nInput Test Item : \n1.LED \n2.A-MODEM \n3.USB \n4.WIFI \n7.DIP \n8.Ethernet \n9.BT \n10.RS232 \n11.DDR \n17.BUZZER \n0.AutuRun \nq.Exit"
+				;;
+		esac
+	fi
+
+#A-101 3G
+#B-102 3G BT WIFI 
+#C-103            MODEM
+#D-104    BT WIFI MODEM
+
+	if [ $automode = 1 ]; then
+		case "$type" in
+			Wrapping_Machine)
+				for iItem in 26 25 01 13 20 22 23 24 03 04 08 21 10 11 12 qq
+				do
+					func_item $iItem
+				done
+				;;
+			AEG-200)
+				for iItem in 1 7 3 4 8 11 12 13 14 16 q
+				do
+					func_item $iItem
+				done
+				;;
+			TYPE-A-101)
+				for iItem in 1 17 3 5 6 7 8 10 11 q
+				do
+					func_item $iItem
+				done
+				;;
+			TYPE-B-102)
+				for iItem in 1 17 3 4 5 6 7 8 9 10 11 q
+				do
+					func_item $iItem
+				done
+				;;
+			TYPE-C-103)
+				for iItem in 1 2 17 3 7 8 10 11 q
+				do
+					func_item $iItem
+				done
+				;;
+			TYPE-D-104)
+				for iItem in 1 2 17 3 4 7 8 9 10 11 q
+				do
+					func_item $iItem
+				done
+				;;
+		esac
+	else
+		case "$type" in	
+			Wrapping_Machine)
+			    		read Item
+					func_item $Item
+				;;
+			AEG-200)
+				func_LEDExport "94"
+				if [ $autoruncheck = 0 ] && [ $(cat /sys/class/gpio/gpio94/value) = 0 ]; then
+					autoruncheck=1
+					read Item
+					func_item $Item
+				else
+					if [ $autoruncheck = 0 ]; then
+						echo -e "\n>>> Start Auto Run !!! >>>"
+						automode=1
+					else
+						read Item
+						func_item $Item
+					fi
+				fi
+				func_LEDUnexport "94"
+				;;
+			TYPE-A-101 | TYPE-B-102 | TYPE-C-103 | TYPE-D-104)
+				func_LEDExport "16"
+				if [ $(cat /sys/class/gpio/gpio16/value) = "1" ];then
+					echo -e "\n>>> Start Auto Run !!! >>>"
+					automode=1
+				else
+			    		read Item
+					func_item $Item
+				fi
+				;;
+		esac
+	fi
+done

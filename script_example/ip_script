@@ -1,0 +1,40 @@
+#!/bin/sh
+
+eth=eth0 
+echo "Start PCBA_Function_Test = $eth "
+
+if [ $(ifconfig | grep $eth | wc -l) = 0 ]; then
+	ifconfig $eth up 
+	sleep 18 
+fi
+
+ip=$(ifconfig $eth | awk 'sub(/inet addr:/,""){print $1}')
+
+echo "ip=$ip"
+
+p1=${ip/192.168.11./}
+
+echo "p1=$p1"
+
+IFS="\."
+export IFS
+for word in $ip; do
+	echo "$word"
+	if [ -z	$ip1 ]; then
+		ip1=$word
+	elif [ -z $ip2 ]; then
+		ip2=$word
+	elif [ -z $ip3 ]; then
+		ip3=$word
+	else
+		ip4=$word
+	fi
+done
+
+echo $ip
+
+echo "${ip%.*}"
+pp=${ip%.*}.1
+
+echo "pp=$pp"
+

@@ -1,0 +1,13 @@
+#!/bin/sh
+if [ ! -d /etc/X11/xorg.conf.d ] ; then
+	mkdir /etc/X11/xorg.conf.d
+fi
+
+if [ -f /etc/X11/xorg.conf.d/99-calibration.conf ] ; then
+	before=$(cat /etc/X11/xorg.conf.d/99-calibration.conf | grep "Calibration")
+	after=$(xinput_calibrator | grep "Calibration")
+	sed -i "s/$before/$after/g" /etc/X11/xorg.conf.d/99-calibration.conf
+else
+	touch /etc/X11/xorg.conf.d/99-calibration.conf
+	xinput_calibrator | tail -n 6 > /etc/X11/xorg.conf.d/99-calibration.conf
+fi

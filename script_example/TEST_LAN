@@ -1,0 +1,24 @@
+#!/bin/sh
+
+ethernet0=eth0
+ethernet1=eth1
+
+if [ $(ifconfig | grep "$ethernet0" | wc -l) = 0 ]; then
+	ifconfig $ethernet0 up 
+fi
+if [ $(ifconfig | grep "$ethernet1" | wc -l) = 0 ]; then
+	ifconfig $ethernet1 up 
+fi
+
+dhclient $ethernet0
+dhclient $ethernet1 
+
+ip=$(ifconfig $ethernet1 2>/dev/null|awk '/inet addr:/ {print $2}'|sed 's/addr://') 
+ip=${ip%.*} 
+ip=$ip
+ip1=".1"
+ip=$ip$ip1
+ping $ip -I $ethernet1 & 
+ping $ip -I $ethernet0 &  
+
+

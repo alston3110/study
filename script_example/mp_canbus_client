@@ -1,0 +1,53 @@
+#!/bin/sh
+result=0
+dev_name=can0
+
+if [ -z ${enable_can} ]; then
+    enable_can=0
+fi
+
+if [ ${enable_can} == 1 ]; then
+    result=1
+else
+	if [ $(ifconfig | grep "can" | wc -l) -eq 0 ]; then 
+		ip link set $dev_name up type can bitrate 125000	
+	fi
+
+	cansend $dev_name 500#1E.10.10
+	cansniffer $dev_name >> pp.log & 
+
+	for loop in 0 1 2 3 4
+	do 
+		sleep 10 
+		if [ $(cat pp.log | grep "1E.10.10" | wc -l) -gt 1 ]; then
+			echo "Canbus   : PASS!!"
+			result=1
+			break;
+		else 
+			cansend $dev_name 500#1E.10.10	
+		fi
+	done
+fi
+
+for loop in 0 1 2 3 4
+do
+	pid=$(ps ax | grep "cansniffer can0" | grep -v grep | awk '{print $1}' | sed q)
+	if [ !-z $pid ]; then
+		kill $pid
+	else
+		break;
+	fi
+done
+
+echo "${dev_name} = $result" > ./tools/log/${dev_name}.log
+rm pp.log
+sync
+
+if [ ${result} -gt 0 ]; then
+    echo "Canbus ${dev_name} : PASS"
+else
+    echo "Canbus ${dev_name} : FAIL"
+fi
+
+exit ${result}
+ 

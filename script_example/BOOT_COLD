@@ -1,0 +1,30 @@
+#!/bin/sh
+#//Alston-20160408-Release!! for Reboot test//at Ubuntu system#
+echo -e "\n"
+
+if [ ! -f /etc/rc.local.bak ]; then
+	echo -e "Start Boot Test"
+        cp -avrf /etc/rc.local /etc/rc.local.bak
+        sync
+	sed -i "/min_free_kbytes/i cd $(pwd)" /etc/rc.local
+	sed -i "/min_free_kbytes/i ./04_boot/BOOT_COLD" /etc/rc.local
+	sync
+	echo "Reboot test Start!!!!" >> /dev/ttymxc1 
+fi
+
+if [ -f $(pwd)/count ]; then 
+	count=$(cat $(pwd)/count | grep count | awk '{print $2}')
+	sync
+	count=$(expr $count + 1)
+else
+	count=0	
+fi
+
+echo "count  $count" >> $(pwd)/.count
+echo "============================================" > /dev/ttymxc1 
+echo @@@@@@@@@@@@@@@@@@@ boot count = $count @@@@ > /dev/ttymxc1 
+echo "============================================" > /dev/ttymxc1 
+mv $(pwd)/.count $(pwd)/count
+sync
+
+

@@ -1,0 +1,29 @@
+#!/bin/sh
+func_MIC_SPEAKER() {
+		amixer set "Jack Function" off
+		rm ./audio.wav
+		sync
+		echo -e "    Start Recode MIC_IN to audio.wav " > /dev/ttymxc3
+		arecord -t wav -f cd -d 5 ./audio.wav
+		echo -e "    Stop Recode & Start play to Speaker " > /dev/ttymxc3
+		aplay ./audio.wav
+}
+
+func_LINEIN_EARPHONE() {
+		amixer set "Jack Function" on
+		amixer set "Headphone Mux" LINE_IN
+		amixer set "Line In Function" on
+		echo -e "    LINE_IN to Earphone " > /dev/ttymxc3
+		sleep 5
+		echo -e "    LINE IN play Finish " > /dev/ttymxc3
+		amixer set "Jack Function" off
+		amixer set "Headphone Mux" DAC
+		amixer set "Line In Function" off
+}
+
+while true ;do
+	func_MIC_SPEAKER
+	sleep 1
+	func_LINEIN_EARPHONE
+	sleep 1
+done

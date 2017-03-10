@@ -1,0 +1,1076 @@
+#!/bin/sh
+
+func_LED() {
+	echo -e "\n>>> Start Test LED >>>" > $outputport
+	case "$type" in
+		Wrapping_Machine)
+			./01-LED-TEST &
+			echo "Please check LED : (y)->Pass ; (n)->Fail" > $outputport
+			read led
+			case "$led" in
+			y)
+				echo "1.Test LED= Pass" >> ./"$model"
+				led="##01##.Pass "
+				echo "<<< Finish LED Test --- $led <<<" > $outputport
+				killall 01-LED-TEST
+				;;
+			n)
+				echo "1.Test LED= Fail" >> ./"$model"
+				led="##01##.Fail "
+				echo "<<< Finish LED Test --- $led <<<" > $outputport
+				killall 01-LED-TEST
+				;;
+			esac
+			;;
+		AEG-200)
+			func_LEDExport "67 68 69 71"
+			while true ;do
+				echo "(1)->turn on LED ; (y)->Pass ; (n)->Fail" > $outputport
+				read led
+				case "$led" in
+				1) func_LEDOn "67 68 69 71"
+					;;
+				2) func_LEDOff "67 68 69 71"
+					;;
+				y) func_LEDUnexport "67 68 69 71"
+					echo "1.Test LED= Pass" >> ./"$model"
+				  	led="1.Pass "
+					echo "<<< Finish LED Test --- $led <<<" > $outputport
+				  	func_Buzzer 1
+					break ;;
+				n) func_LEDUnexport "67 68 69 71"
+				   	echo "1.Test LED= Fail" >> ./"$model"
+					led="1.Fail "
+					echo "<<< Finish LED Test --- $led <<<" > $outputport
+					func_Buzzer 3
+					break ;;
+				esac
+			done
+			;;
+		TYPE-A-101 | TYPE-B-102 | TYPE-C-103 | TYPE-D-104)
+			func_LEDExport "17 21 102 100 104 105 106 107 108 109 110 101"
+			while true ;do
+				echo "(1)->turn on RED LED ; (2)->turn on GREEN LED ; (y)->Pass ; (n)->Fail" > $outputport
+				read led
+				case "$led" in
+				1) func_LEDOff "17 100 105 107 108 101" #func_GreenLEDOff
+					func_LEDOn "21 102 104 106 109 110";; #func_RedLEDOn
+				2) func_LEDOff "21 102 104 106 109 110" #func_RedLEDOff
+					func_LEDOn "17 100 105 107 108 101";; #func_GreenLEDOn
+				0) func_LEDOff "17 21 102 100 104 105 106 107 108 109 110 101";;
+#				q) func_LEDOff "17 21 102 100 104 105 106 107 108 109 110 101"
+#					func_LEDUnexport "17 21 102 100 104 105 106 107 108 109 110 101"
+#					break ;;
+				y) func_LEDOff "17 21 102 100 104 105 106 107 108 109 110 101"
+					func_LEDUnexport "17 21 102 100 104 105 106 107 108 109 110 101"
+					echo "1.Test LED= Pass" >> ./"$model"
+				  	led="1.Pass "
+					echo "<<< Finish LED Test --- $led <<<" > $outputport
+				  	func_Buzzer 1
+					break ;;
+				n) func_LEDOff "17 21 102 100 104 105 106 107 108 109 110 101"
+					func_LEDUnexport "17 21 102 100 104 105 106 107 108 109 110 101"
+				   	echo "1.Test LED= Fail" >> ./"$model"
+					led="1.Fail "
+					echo "<<< Finish LED Test --- $led <<<" > $outputport
+					func_Buzzer 3
+					break ;;
+				esac
+			done
+			;;
+	esac
+}
+
+func_A_MODEM() {
+	echo -e "\n>>> Start Test A-MODEM >>>" > $outputport #&& echo "2.Test A-MODEM" >> ./"$model"
+	case "$type" in
+		AEG-200 | TYPE-A-101 | TYPE-B-102)
+			echo "$type does not support A-MODEM device" > $outputport
+			;;
+		TYPE-C-103 | TYPE-D-104)
+			amodem=a
+		
+			echo "[Please key in (y) for PASS, (n) for FAIL, (a) try again]" > $outputport
+			while [ $amodem = a ] ;do
+				sleep 1
+				echo "ATDT$phonenumber" > /dev/ttymxc4
+				read amodem
+				echo "ATH" > /dev/ttymxc4
+				usleep 200000
+			done
+
+			if [ $amodem = y ]; then
+				echo "2.Test A-MODEM= Pass" >> ./"$model"
+				amodem="2.Pass "
+				echo "<<< Finish A-MODEM Test --- $amodem<<<" > $outputport
+				func_Buzzer 1
+			else
+			   	echo "2.Test A-MODEM= Fail" >> ."$model"
+				amodem="2.Fail "
+				echo "<<< Finish A-MODEM Test --- $amodem<<<" > $outputport
+				func_Buzzer 3
+			fi
+			;;
+	esac
+}
+
+func_USB() {
+	echo -e "\n>>> Start Test USB >>>" > $outputport #&& echo "3.Test USB" >> ./"$model"
+	case "$type" in
+		Wrapping_Machine)
+			if [ -d /mnt/sdb1/USB_TEST ];then
+				insmod /lib/modules/3.0.35/kernel/drivers/usb/gadget/g_file_storage.ko file=/dev/sdb stall=0 removable=1
+			else
+				echo "Check /mnt/sdb1/USB_TEST Fail" > $outputport
+			fi
+
+			sleep 5
+
+			if [ -d /mnt/sdc1/USB_TEST ];then
+				echo "OTG device Mount to USB_C1, Pass" > $outputport
+			else
+				echo "OTG device Mount to USB_C1, Fail" > $outputport
+			fi
+
+			usbtest1=0
+			usbtest2=0
+			usb_pass_count=0
+			usb_fail_count=0
+			for i in $usbdev
+			do
+			USBPWD=$(mount | grep /dev/$i | awk '{print $3}')
+			if [ -f /etc/version ] && [ $(mount | grep /dev/$i | awk '{print $3}' | wc -l) = 1 ]; then
+				cp /etc/version $USBPWD/USB_TEST/USB_TEST
+				sync
+				if [ $(cat $USBPWD/USB_TEST/USB_TEST) = $bspversion ]; then
+					usb_pass_count=$(expr $usb_pass_count + 1)
+					usbtest1="Pass"
+					echo -e "$USBPWD Pass " > $outputport
+				else
+					usb_fail_count=$(expr $usb_fail_count + 1)
+					usbtest2="Fail"
+					echo -e "$USBPWD Fail" > $outputport
+				fi
+				rm $USBPWD/USB_TEST/USB_TEST
+				sync
+
+				if [ -f $USBPWD/USB_TEST/USB_TEST ]; then
+					usb_fail_count=$(expr $usb_fail_count + 1)
+					usbtest2="Fail"
+					echo -e "$USBPWD Fail" > $outputport
+				fi
+			fi
+			done
+
+			if [ $usb_pass_count = 3 ] && [ $usb_fail_count = 0 ]; then
+				echo "3.Test USB= Pass" >> ./"$model"
+				usb="##03##.Pass "
+				echo "<<< Finish USB Test --- $usb <<<" > $outputport
+			else
+				echo "pass : $usb_pass_count , fail : $usb_fail_count" > $outputport
+				echo "3.Test USB= Fail" >> ./"$model"
+				usb="##03##.Fail "
+				echo "<<< Finish USB Test --- $usb <<<" > $outputport
+			fi
+			;;
+		AEG-200 | TYPE-A-101 | TYPE-B-102 | TYPE-C-103 | TYPE-D-104)
+#			umount /mnt
+#			mount /dev/sda1 /mnt
+			usbtest1=0
+			usbtest2=0
+			for i in $usbdev
+			do
+			USBPWD=$(mount | grep /dev/$i | awk '{print $3}')
+			if [ -f /etc/version ] && [ $(mount | grep /dev/$i | awk '{print $3}' | wc -l) = 1 ]; then
+				cp /etc/version $USBPWD/USB_TEST/USB_TEST
+				sync
+				if [ $(cat $USBPWD/USB_TEST/USB_TEST) = $bspversion ]; then
+					usbtest1="Pass"
+					echo -e "$USBPWD Pass " > $outputport
+				else
+					usbtest2="Fail"
+					usb="3.$i-Fail "
+					rm $USBPWD/USB_TEST/USB_TEST
+					echo "3.Test USB-$i= Fail" >> ./"$model"
+					echo "<<< Finish USB Test --- $usb <<<" > $outputport
+					func_Buzzer 3
+				fi
+				rm $USBPWD/USB_TEST/USB_TEST
+				sync
+				if [ -f $USBPWD/USB_TEST/USB_TEST ]; then
+					usbtest2="Fail"
+					usb="3.$i-Fail "
+					echo "3.Test USB-$i= Fail" >> ./"$model"
+					echo "<<< Finish USB Test --- $usb <<<" > $outputport
+					func_Buzzer 3
+				fi
+			fi
+			done
+
+			if [ $usbtest1 = "Pass" ] && [ ! $usbtest2 = "Fail" ]; then
+				echo "3.Test USB= Pass" >> ./"$model"
+				usb="3.Pass "
+				echo "<<< Finish USB Test --- $usb <<<" > $outputport
+				func_Buzzer 1
+			else
+				echo "3.Test USB= Fail" >> ./"$model"
+				echo "<<< Finish USB Test --- $usb <<<" > $outputport
+				func_Buzzer 3
+			fi
+			;;
+	esac
+}
+
+func_WIFI() {
+	echo -e "\n>>> Start Test WIFI >>>" > $outputport #&& echo "4.Test WIFI" >> ./"$model"
+#	echo "Get file from FTP,and check content" > $outputport
+	case "$type" in
+		TYPE-A-101 | TYPE-C-103)
+			echo "$type does not support WIFI device" > $outputport
+			;;
+		AEG-200 | TYPE-B-102 | TYPE-D-104 | Wrapping_Machine)
+			if [ -f ./TEST_WIFI ]; then 
+				rm ./TEST_WIFI
+			fi
+			sync
+
+			if [ $type = "AEG-200" ]; then
+				insmod /lib/modules/2.6.35.3/kernel/drivers/net/wireless/rt5370sta.ko
+				sleep 1
+				ifconfig wlan0 up
+				sleep 1
+			fi
+			if [ $type = "Wrapping_Machine" ]; then
+				ifconfig wlan0 up
+				sleep 1
+			fi
+
+			timeswifi=1
+			while [ ! -f ./TEST_WIFI ] && [ ! $timeswifi = $wifimaxtimes ]; do
+				/usr/sbin/wpa_supplicant -iwlan0 -c/etc/wpa_supplicant/wpa_supplicant.conf &
+
+				sleep 3
+
+				if [ $security = "wpa" ]; then
+					networkid=$(wpa_cli -iwlan0 -p/var/run/wpa_supplicant add_network)
+					checkid=$(wpa_cli -iwlan0 -p/var/run/wpa_supplicant set_network $networkid ssid \"$wpassid\")
+					checkpw=$(wpa_cli -iwlan0 -p/var/run/wpa_supplicant set_network $networkid psk \"$wpapw\")
+					checken=$(wpa_cli -iwlan0 -p/var/run/wpa_supplicant enable_network $networkid)
+				fi
+				if [ $security = "wep" ]; then
+					networkid=$(wpa_cli -iwlan0 -p/var/run/wpa_supplicant add_network)
+					checkid=$(wpa_cli -iwlan0 -p/var/run/wpa_supplicant set_network $networkid ssid \"$wepssid\")
+					checkid=$(wpa_cli -iwlan0 -p/var/run/wpa_supplicant set_network $networkid key_mgmt NONE)
+					checkpw=$(wpa_cli -iwlan0 -p/var/run/wpa_supplicant set_network $networkid wep_key0 \"$weppw\")
+					checken=$(wpa_cli -iwlan0 -p/var/run/wpa_supplicant enable_network $networkid)
+				fi
+
+				udhcpc -i wlan0 &
+	
+				wifitimes=0
+				while [ ! $(ifconfig wlan0 | grep "inet addr" | wc -l ) = 1 ] && [ ! $wifitimes = $maxwifitimes ]; do
+					sleep 1
+					wifitimes=$(expr $wifitimes + 1)
+				done
+
+				sleep 5
+	
+				if [ $(ping -c 3 $wififtpserver | grep seq | wc -l) = 3 ]; then
+					ftpget -u $ftpid -p $ftppw $wififtpserver TEST_WIFI TEST_WIFI
+				fi
+		
+				killall udhcpc	
+				killall wpa_supplicant
+				ifconfig wlan0 down
+				timeswifi=$(expr $timeswifi + 1)
+			done
+	
+			wifi=$(cat ./TEST_WIFI)
+
+			rm ./TEST_WIFI
+			sync
+
+			if [ $wifi = TEST_WIFI ]; then
+				echo "4.Test WIFI= Pass" >> ./"$model"
+				wifi="##04##.Pass "
+				echo "<<< Finish WIFI Test --- $wifi <<<" > $outputport
+				func_Buzzer 1
+			else
+				echo "4.Test WIFI= Fail" >> ./"$model"
+				wifi="##04##.Fail "
+				echo "<<< Finish WIFI Test --- $wifi <<<" > $outputport
+				func_Buzzer 3
+			fi
+			;;
+	esac
+}
+
+func_3G() {
+	echo -e "\n>>> Start Test 3G >>>" > $outputport #&& echo "5.Test 3G" >> ./"$model"
+#	echo "Get file from FTP,and check content" > $outputport
+	case "$type" in
+		AEG-200 | TYPE-C-103 | TYPE-D-104)
+			echo "$type does not support 3G device" > $outputport
+			;;
+		TYPE-A-101 | TYPE-B-102)
+			if [ -f ./TEST_3G ]; then 
+				rm ./TEST_3G
+			fi
+			sync
+
+			gggtimes=1
+			while [ ! -f ./TEST_3G ] && [ ! $gggtimes = $gggmaxtimes ]; do
+				wvdial -C $wvdialconf PinDEFAULT
+				wvdial -C $wvdialconf DEFAULT &
+				sleep $gggsleeptime
+
+#				ftpget -u $ftpid -p $ftppw $ftpserver TEST_3G TEST_3G
+				wget http://$gggid:$gggpw@$gggfile
+
+				killall wvdial
+				gggtimes=$(expr $gggtimes + 1)
+			done
+		
+			ggg=$(cat ./TEST_3G)
+			rm ./TEST_3G
+			sync
+
+			if [ $ggg = WIFI_TEST ]; then
+				echo "5.Test 3G= Pass" >> ./"$model"
+				ggg="5.Pass "
+				echo "<<< Finish 3G Test --- $ggg<<<" > $outputport
+				func_Buzzer 1
+			else
+				echo "5.Test 3G= Fail" >> ./"$model"
+				ggg="5.Fail "
+				echo "<<< Finish 3G Test --- $ggg<<<" > $outputport
+				func_Buzzer 3
+			fi
+			;;
+	esac
+}
+
+func_GPS() {
+	echo -e "\n>>> Start Test GPS >>>" > $outputport #&& echo "6.Test GPS" >> ./"$model"
+	case "$type" in
+		AEG-200 | TYPE-C-103 | TYPE-D-104)
+			echo "$type does not support GPS device" > $outputport
+			;;
+		TYPE-A-101 | TYPE-B-102)
+#			echo AT^SGPSC="Engine","1" > /dev/ttyUSB2
+#			echo AT^SGPSS=4 > /dev/ttyUSB2
+
+			gps=V
+			gpstimes=1
+			while [ ! $gps = A ] && [ ! $gpstimes = $gpsmaxtimes ]; do
+				gps=$(./RTX_GPS \$GPRMC $gpsscantimes)
+				gpstimes=$(expr $gpstimes + 1)
+			done
+
+			if [ $gps = A ]; then
+				echo "6.Test GPS= Pass" >> ./"$model"
+				gps="6.Pass "
+				echo "<<< Finish GPS Test --- $gps<<<" > $outputport
+			else
+			   	echo "6.Test GPS= Fail" >> ./"$model"
+				gps="6.Fail "
+				echo "<<< Finish GPS Test --- $gps<<<" > $outputport
+				func_Buzzer 3
+			fi
+			;;
+	esac
+}
+
+func_DIP_SWITCH() {
+	echo -e "\n>>> Start Test DIP-Switch >>>" > $outputport #&& echo "7.Test DIP-Switch" >> ./"$model"
+	case "$type" in
+		AEG-200)
+			DS=0
+			dwitchtimes=1
+			func_LEDExport "94"
+			if [ $(cat /sys/class/gpio/gpio94/value) = 1 ]; then
+				echo "[Please push the button for 1 second after release]" > $outputport
+				while [ $DS = 0 ] && [ ! $dwitchtimes = $dwitchmaxtimes ]; do
+					if [ $(cat /sys/class/gpio/gpio94/value) = 0 ]; then
+						DS=2
+					fi
+					sleep 1
+					dwitchtimes=$(expr $dwitchtimes + 1)
+				done
+				while [ $DS = 2  ] && [ ! $dwitchtimes = $dwitchmaxtimes ]; do
+					if [ $(cat /sys/class/gpio/gpio94/value) = 1 ]; then
+						DS=1
+					fi
+					sleep 1
+					dwitchtimes=$(expr $dwitchtimes + 1)
+				done
+			fi
+
+			if [ $DS = 1 ]; then
+				echo "7.Test DIP-Switch= Pass" >> ./"$model"
+				DS="7.Pass "
+				func_LEDUnexport "94"
+				echo "<<< Finish DIP-Switch Test --- $DS <<<" > $outputport
+				func_Buzzer 1
+			else
+				echo "7.Test DIP-Switch= Fail" >> ./"$model"
+				DS="7.Fail "
+				func_LEDUnexport "94"
+				echo "<<< Finish DIP-Switch Test --- $DS <<<" > $outputport
+				func_Buzzer 3
+			fi
+			;;
+		TYPE-A-101 | TYPE-B-102 | TYPE-C-103 | TYPE-D-104)
+			func_LEDExport "16 18 20"
+			DS1=$(cat /sys/class/gpio/gpio18/value)
+			DS2=$(cat /sys/class/gpio/gpio20/value)
+			DS3=$(cat /sys/class/gpio/gpio16/value)
+
+			if [ $DS1 = 0 ] && [ $DS2 = 0 ] && [ $DS3 = 1 ]; then
+				echo "7.Test DIP-Switch= Pass" >> ./"$model"
+				DS="7.Pass "
+				func_LEDUnexport "16 18 20"
+				echo "<<< Finish DIP-Switch Test --- $DS <<<" > $outputport
+				func_Buzzer 1
+			else
+		   	echo "7.Test DIP-Switch= Fail" >> ./"$model"
+				DS="7.Fail "
+				func_LEDUnexport "16 18 20"
+				echo "<<< Finish DIP-Switch Test --- $DS <<<" > $outputport
+				func_Buzzer 3
+			fi
+			;;
+	esac
+}
+
+func_ETHERNET() {
+	echo -e "\n>>> Start Test Ethernet - eth0 >>>" > $outputport #&& echo "8.Test Ethernet" >> ./"$model"
+#	echo "Get file from FTP,and check content" > $outputport
+	case "$type" in
+		AEG-200 | TYPE-A-101 | TYPE-B-102 | TYPE-C-103 | TYPE-D-104 | Wrapping_Machine)
+			if [ -f ./TEST_ETHERNET ]; then 
+				rm ./TEST_ETHERNET
+			fi
+			sync
+		
+			ethtimes=1
+			while [ ! -f ./TEST_ETHERNET ] && [ ! $ethtimes = $ethmaxtimes ]; do
+				udhcpc -i eth0 &
+				sleep 2
+				if [ $(ifconfig eth0 |grep inet | wc -l) = 0 ]; then
+					sleep 3
+				fi
+	
+				if [ $(ping -c 3 $ftpserver | grep seq | wc -l) = 3 ]; then
+					ftpget -u $ftpid -p $ftppw $ftpserver TEST_ETHERNET TEST_ETHERNET
+				fi
+
+				killall udhcpc
+				ifconfig eth0 down
+
+				ethtimes=$(expr $ethtimes + 1)
+			done
+		
+			eth=$(cat ./TEST_ETHERNET)
+
+			rm ./TEST_ETHERNET
+			sync
+
+
+			if [ $eth = TEST_ETHERNET ]; then
+				echo "8.Test Ethernet= Pass" >> ./"$model"
+				eth="##08##.Pass "
+				echo "<<< Finish Ethernet Test --- $eth <<<" > $outputport
+				func_Buzzer 1
+			else
+				echo "8.Test Ethernet= Fail" >> ./"$model"
+				eth="##08##.Fail "
+				echo "<<< Finish Ethernet Test --- $eth <<<" > $outputport
+				func_Buzzer 3
+			fi
+			;;
+	esac
+}
+
+func_ETHERNET1() {
+	echo -e "\n>>> Start Test Ethernet - eth1 >>>" > $outputport #&& echo "21.Test Ethernet" >> ./"$model"
+#	echo "Get file from FTP,and check content" > $outputport
+	case "$type" in
+		AEG-200 | TYPE-A-101 | TYPE-B-102 | TYPE-C-103 | TYPE-D-104 | Wrapping_Machine)
+			if [ -f ./TEST_ETHERNET ]; then 
+				rm ./TEST_ETHERNET
+			fi
+			sync
+		
+			ethtimes=1
+			while [ ! -f ./TEST_ETHERNET ] && [ ! $ethtimes = $ethmaxtimes ]; do
+				udhcpc -i eth1 &
+				sleep 2
+				if [ $(ifconfig eth1 |grep inet | wc -l) = 0 ]; then
+					sleep 3
+				fi
+	
+				if [ $(ping -c 3 $ftpserver | grep seq | wc -l) = 3 ]; then
+					ftpget -u $ftpid -p $ftppw $ftpserver TEST_ETHERNET TEST_ETHERNET
+				fi
+
+				killall udhcpc
+				ifconfig eth1 down
+
+				ethtimes=$(expr $ethtimes + 1)
+			done
+		
+			eth=$(cat ./TEST_ETHERNET)
+
+			rm ./TEST_ETHERNET
+			sync
+
+
+			if [ $eth = TEST_ETHERNET ]; then
+				echo "21.Test Ethernet= Pass" >> ./"$model"
+				eth="##21##.Pass "
+				echo "<<< Finish Ethernet Test --- $eth <<<" > $outputport
+			else
+				echo "21.Test Ethernet= Fail" >> ./"$model"
+				eth="##21##.Fail "
+				echo "<<< Finish Ethernet Test --- $eth <<<" > $outputport
+			fi
+			;;
+	esac
+}
+func_BT() {
+	echo -e "\n>>> Start Test BT >>>" > $outputport #&& echo "9.Test BT" >> ./"$model"
+	case "$type" in
+		AEG-200 | TYPE-A-101 | TYPE-C-103)
+			echo "$type does not support BT device" > $outputport
+			;;
+		TYPE-B-102 | TYPE-D-104)
+			echo -e "start search BT device-$btcheckmac......" > $outputport
+			bt=$(hcitool scan | grep "$btcheckmac" | awk '{print $1}')
+
+			if [ "$bt" = "$btcheckmac" ]; then
+				echo "9.Test BT= Pass" >> ./"$model"
+				bt="##09##.Pass "
+				echo "<<< Finish BT Test --- $bt <<<" > $outputport
+				func_Buzzer 1
+			else
+				echo "9.Test BT= Fail" >> ./"$model"
+				bt="##09##.Fail "
+				echo "<<< Finish BT Test --- $bt <<<" > $outputport
+				func_Buzzer 3
+			fi
+			;;
+	esac
+}
+
+func_RS232() {
+	echo -e "\n>>> Start Test RS232 >>>" > $outputport #&& echo "10.Test RS232" >> ./"$model"
+	case "$type" in
+		AEG-200)
+			echo "$type does not support RS232 device" > $outputport
+			;;
+		TYPE-A-101 | TYPE-B-102 | TYPE-C-103 | TYPE-D-104 | Wrapping_Machine)
+			uart_1=-1
+			rs232times=1
+			while [ ! $uart_1 = 0 ] && [ ! $rs232times = $rs232maxtimes ]; do
+				if [ -f ./uart1_self_test ]; then
+					./uart1_self_test
+					uart_1=$(echo $?)
+				fi
+				sleep $rs232times
+				rs232times=$(expr $rs232times + 1)
+			done
+
+			uart_2=-1
+			rs232times=1
+			while [ ! $uart_2 = 0 ] && [ ! $rs232times = $rs232maxtimes ]; do
+				if [ -f ./uart2_self_test ]; then
+					./uart2_self_test
+					uart_2=$(echo $?)
+				fi
+				sleep $rs232times
+				rs232times=$(expr $rs232times + 1)
+			done
+
+			uart_5=-1
+			rs232times=1
+			while [ ! $uart_5 = 0 ] && [ ! $rs232times = $rs232maxtimes ]; do
+				if [ -f ./uart5_self_test ]; then
+					./uart5_self_test
+					uart_5=$(echo $?)
+				fi
+				sleep $rs232times
+				rs232times=$(expr $rs232times + 1)
+			done
+
+			if [ $uart_1 = 0 ] && [ $uart_2 = 0 ] && [ $uart_5 = 0 ]; then
+				echo "10.Test RS232= Pass" >> ./"$model"
+				rs232="##10##.Pass "
+				echo "<<< Finish RS232 Test --- $rs232 <<<" > $outputport
+				func_Buzzer 1
+			else
+				echo "10.Test RS232= Fail" >> ./"$model"
+				rs232="##10##.Fail "
+				echo "<<< Finish RS232 Test --- $rs232 <<<" > $outputport
+				func_Buzzer 3
+			fi
+			;;
+	esac
+}
+
+func_DDR() {
+	echo -e "\n>>> Start Test DDR >>>" > $outputport #&& echo "11.Test DDR" >> ./"$model"
+	case "$type" in
+		Wrapping_Machine)
+			#check external sd
+			if [ $(rtx_setenv_mmcblk1 -l | grep "Mem_Test = Pass" | wc -l) = 1 ]; then
+				echo "11.Test DDR= Pass" >> ./"$model"
+				/usr/bin/rtx_setenv --set Mem_Test=Pass
+				/usr/bin/rtx_setenv_mmcblk1 --delete Mem_Test
+				DDR="##11##.Pass "
+				echo "<<< Finish DDR Test --- $DDR <<<" > $outputport
+			else	
+				if [ $(rtx_setenv_mmcblk1 -l | grep "Mem_Test = Fail" | wc -l) = 1 ]; then
+					echo "11.Test DDR= Fail" >> ./"$model"
+					/usr/bin/rtx_setenv --set Mem_Test=Fail
+					/usr/bin/rtx_setenv_mmcblk1 --delete Mem_Test
+					DDR="##11##.Fail "
+					echo "<<< Finish DDR Test --- $DDR <<<" > $outputport
+				else	#check internal emmc
+					if [ $(rtx_setenv -l | grep "Mem_Test = Pass" | wc -l) = 1 ]; then
+						echo "11.Test DDR= Pass" >> ./"$model"
+						DDR="##11##.Pass "
+						echo "<<< Finish DDR Test --- $DDR <<<" > $outputport
+					else
+						if [ $(rtx_setenv -l | grep "Mem_Test = Fail" | wc -l) = 1 ]; then
+							echo "11.Test DDR= Fail" >> ./"$model"
+							DDR="##11##.Fail "
+							echo "<<< Finish DDR Test --- $DDR <<<" > $outputport
+						else			
+							/usr/bin/rtx_setenv_mmcblk1 --set Mem_Test=Redo
+							echo "11.Test DDR= NOT tested" >> ./"$model"
+							DDR="##11##.NOT_tested "
+							echo "<<< Finish DDR Test --- $DDR <<<" > $outputport
+						fi
+					fi
+				fi
+			fi
+			;;
+	esac
+} 
+
+func_SDCARD() {
+	echo -e "\n>>> Start Test SDCARD >>>" > $outputport #&& echo "12.Test SDCARD" >> ./"$model"
+	case "$type" in
+		AEG-200 | Wrapping_Machine)
+			sdcard=0
+			sdcard1pwd=$(mount | grep /dev/mmcblk1p1 | awk '{print $3}')
+			if [ -f /etc/version ] && [ $(mount | grep /dev/mmcblk1p1 | awk '{print $3}' | wc -l) = 1 ]; then
+				cp /etc/version $sdcard1pwd/SDCARD_TEST/SDCARD_TEST
+				sync
+				sdcard=$(cat $sdcard1pwd/SDCARD_TEST/SDCARD_TEST)
+				rm $sdcard1pwd/SDCARD_TEST/SDCARD_TEST
+				sync
+			fi
+
+			if [ $sdcard = $bspversion ] && [ ! -f $sdcard1pwd/SDCARD_TEST/SDCARD_TEST ]; then
+				echo "12.Test SDCARD= Pass" >> ./"$model"
+				sdcard="##12##.Pass "
+				echo "<<< Finish SDCARD Test --- $sdcard <<<" > $outputport
+				func_Buzzer 1
+			else
+				echo "12.Test SDCARD= Fail" >> ./"$model"
+				sdcard="##12##.Fail "
+				echo "<<< Finish SDCARD Test --- $sdcard <<<" > $outputport
+				func_Buzzer 3
+			fi
+			;;
+		TYPE-A-101 | TYPE-B-102 | TYPE-C-103 | TYPE-D-104)
+			echo "$type does not support SDCARD device" > $outputport
+			;;
+	esac
+}
+
+func_GPIO_TEST() {
+	echo $1 > /sys/class/gpio/export
+	echo $2 > /sys/class/gpio/export
+	echo out > /sys/class/gpio/gpio$1/direction
+	echo in > /sys/class/gpio/gpio$2/direction
+	echo 1 > /sys/class/gpio/gpio$1/value
+	if [ ! $(cat /sys/class/gpio/gpio$2/value) = 1 ]; then
+		gpio=1
+	fi
+	echo 0 > /sys/class/gpio/gpio$1/value
+	if [ ! $(cat /sys/class/gpio/gpio$2/value) = 0 ]; then
+		gpio=1
+	fi
+}
+
+func_GPIO() {
+	echo -e "\n>>> Start Test GPIO >>>" > $outputport #&& echo "13.Test GPIO" >> ./"$model"
+	case "$type" in
+		Wrapping_Machine)
+			echo "Please check GPIO : (y)->Pass ; (n)->Fail" > $outputport
+			./13-GPIO-TEST &
+			read gpio
+			case "$gpio" in
+			y) 
+				echo "13.Test GPIO= Pass" >> ./"$model"
+				gpio="##13##.Pass "
+				echo "<<< Finish GPIO Test --- $gpio <<<" > $outputport
+				killall 13-GPIO-TEST
+				;;
+			n) 
+				echo "13.Test GPIO= Fail" >> ./"$model"
+				gpio="##13##.Fail "
+				echo "<<< Finish GPIO Test --- $gpio <<<" > $outputport
+				killall 13-GPIO-TEST
+				;;
+			esac		
+			;;
+		AEG-200)	
+			gpio=0
+			func_GPIO_TEST  99 104
+			func_GPIO_TEST  98 103
+			func_GPIO_TEST  97 102
+			func_GPIO_TEST 100 101
+			func_GPIO_TEST 104  99
+			func_GPIO_TEST 103  98
+			func_GPIO_TEST 102  97
+			func_GPIO_TEST 101 100
+
+			if [ $gpio = 0 ]; then
+				echo "13.Test GPIO= Pass" >> ./"$model"
+				gpio="13.Pass "
+				echo "<<< Finish GPIO Test --- $gpio <<<" > $outputport
+				func_Buzzer 1
+			else
+				echo "13.Test GPIO= Fail" >> ./"$model"
+				gpio="13.Fail "
+				echo "<<< Finish GPIO Test --- $gpio <<<" > $outputport
+				func_Buzzer 3
+			fi
+			;;
+		TYPE-A-101 | TYPE-B-102 | TYPE-C-103 | TYPE-D-104)
+			echo "$type does not support GPIO device" > $outputport
+			;;
+	esac
+}
+
+func_RS485() {
+	echo -e "\n>>> Start Test RS485 >>>" > $outputport #&& echo "14.Test RS485" >> ./"$model"
+	case "$type" in
+		AEG-200)
+			rs485=-1
+			rs485times=1
+			while [ ! $rs485 = 0 ] && [ ! $rs485times = $rs485maxtimes ]; do
+				if [ -f ./RS485_uart1_client ]; then
+					./RS485_uart1_client
+					rs485=$(echo $?)
+				fi
+				sleep $rs485times
+				rs485times=$(expr $rs485times + 1)
+			done
+	
+			if [ $rs485 = 0 ]; then
+				echo "14.Test RS485= Pass" >> ./"$model"
+				rs485="14.Pass "
+				echo "<<< Finish RS485 Test --- $rs485<<<" > $outputport
+				func_Buzzer 1
+			else
+				echo "14.Test RS485= Fail" >> ./"$model"
+				rs485="14.Fail "
+				echo "<<< Finish RS485 Test --- $rs485<<<" > $outputport
+				func_Buzzer 3
+			fi
+			;;
+		TYPE-A-101 | TYPE-B-102 | TYPE-C-103 | TYPE-D-104)
+			echo "$type does not support RS485 device" > $outputport
+			;;
+	esac
+
+}
+
+func_ZIGBEE_TIMEOUT() {
+	zigbeetimeout=1
+	while [ $(cat $(pwd)/zigbeetimeout ) = 1 ] && [ ! $zigbeetimeout = $zigbeemaxtimeout ]; do
+		zigbeetimeout=$(expr $zigbeetimeout + 1)
+		sleep 1
+	done
+	killall -q jn5148-rf-test
+}
+
+func_ZIGBEE() {
+	echo -e "\n>>> Start Test ZIGBEE >>>" > $outputport #&& echo "15.Test ZIGBEE" >> ./"$model"
+	case "$type" in
+		AEG-200)
+			zigbee=0
+			zigbeetimes=1
+			while [ ! $zigbee = 1 ] && [ ! $zigbeetimes = $zigbeemaxtimes ]; do
+				if [ -f /usr/bin/jn5148-rf-test ]; then
+					echo 1 > $(pwd)/zigbeetimeout
+					func_ZIGBEE_TIMEOUT &
+					zigbee=$(/usr/bin/jn5148-rf-test $pair $dutport $guport) && zigbee=$(echo $zigbee | grep [A-Z])
+					zigbee="${zigbee:-time_out}"
+					echo 0 > $(pwd)/zigbeetimeout
+				fi
+				if [ $(echo $zigbee | grep "PASS" | wc -l ) = 1 ]; then
+					zigbee=$(echo $zigbee | grep "PASS" | wc -l )
+				fi
+				sleep $zigbeetimes
+				zigbeetimes=$(expr $zigbeetimes + 1)
+			done
+
+			if [ $zigbee = 1 ]; then
+				echo "15.Test ZIGBEE= Pass" >> ./"$model"
+				zigbee="15.Pass "
+				echo "<<< Finish ZIGBEE Test --- $zigbee<<<" > $outputport
+				func_Buzzer 1
+			else
+				echo "15.Test ZIGBEE= Fail" >> ./"$model"
+				zigbee="15.$zigbee "
+				echo "<<< Finish ZIGBEE Test --- $zigbee<<<" > $outputport
+				func_Buzzer 3
+			fi
+			;;
+		TYPE-A-101 | TYPE-B-102 | TYPE-C-103 | TYPE-D-104)
+			echo "$type does not support ZIGBEE device" > $outputport
+			;;
+	esac
+}
+
+func_CPU() {
+	echo -e "\n>>> Start Test CPU >>>" > $outputport #&& echo "16.Test CPU" >> ./"$model"
+	case "$type" in
+		AEG-200)
+			CPUINFOMAX=$(cat /sys/devices/system/cpu/cpu0/cpufreq/cpuinfo_max_freq)
+			CPUINFOMIP=$(cat /sys/devices/system/cpu/cpu0/cpufreq/cpuinfo_mips)
+
+			CPUVALUE=$(expr $CPUINFOMAX - $CPUINFOMIP)
+			CPUINFOMAX=$(expr $CPUINFOMAX / 100)
+
+			if [ $CPUVALUE -gt "-$CPUINFOMAX" ] && [ $CPUVALUE -lt $CPUINFOMAX ]; then
+				echo "16.Test CPU= Pass" >> ./"$model"
+				cpu="16.Pass "
+				echo "<<< Finish CPU Test --- $cpu <<<" > $outputport
+				func_Buzzer 1
+			else
+				echo "16.Test CPU= Fail" >> ./"$model"
+				cpu="16.Fail "
+				echo "<<< Finish CPU Test --- $cpu <<<" > $outputport
+				func_Buzzer 3
+			fi
+			;;
+		TYPE-A-101 | TYPE-B-102 | TYPE-C-103 | TYPE-D-104 | Wrapping_Machine)
+			echo "$type does not support CPU speed test" > $outputport
+			;;
+
+	esac
+}
+
+func_BUZZER() {
+	echo -e "\n>>> Start Test BUZZER >>>" > $outputport #&& echo "17.Test BUZZER" >> ./"$model"
+	case "$type" in
+		AEG-200)
+			echo "$type does not support BUZZER device" > $outputport
+			;;
+		TYPE-A-101 | TYPE-B-102 | TYPE-C-103 | TYPE-D-104)
+			buzzer=a
+		
+			echo "[Please key in (y) for PASS, (n) for FAIL, (a) try again]" > $outputport
+			while [ $buzzer = a ] ;do
+				sleep 1
+				echo 128 > /sys/class/backlight/pwm-backlight.1/brightness
+				usleep 200000
+				read buzzer
+				echo 0 > /sys/class/backlight/pwm-backlight.1/brightness
+				usleep 200000
+			done
+
+			if [ $buzzer = y ]; then
+				echo "17.Test BUZZER= Pass" >> ./"$model"
+				buzzer="17.Pass "
+				echo "<<< Finish BUZZER Test --- $amodem<<<" > $outputport
+				func_Buzzer 1
+			else
+			   	echo "17.Test BUZZER= Fail" >> ."$model"
+				buzzer="17.Fail "
+				echo "<<< Finish BUZZER Test --- $amodem<<<" > $outputport
+				func_Buzzer 3
+			fi
+			;;
+	esac
+}
+
+func_Audio() {
+	echo -e "\n>>> Start Test Audio >>>" > $outputport
+	case "$type" in
+		Wrapping_Machine)
+			./20-AUDIO-TEST &
+			echo "Please check Audio : (y)->Pass ; (n)->Fail" > $outputport
+			read audio
+			case "$audio" in
+			y)
+				echo "20.Test Audio= Pass" >> ./"$model"
+				audio="##20##.Pass "
+				echo "<<< Finish Audio Test --- $audio <<<" > $outputport
+				killall 20-AUDIO-TEST 
+				;;
+			n) 
+				echo "20.Test Audio= Fail" >> ./"$model"
+				audio="##20##.Fail "
+				echo "<<< Finish Audio Test --- $audio <<<" > $outputport
+				killall 20-AUDIO-TEST 
+				;;
+			esac
+		;;
+	esac
+}
+
+func_Lvds() {
+	echo -e "\n>>> Start Test Lvds >>>" > $outputport
+	case "$type" in
+		Wrapping_Machine)
+			echo "Please check Lvds : (y)->Pass ; (n)->Fail" > $outputport
+			/unit_tests/autorun-fb.sh &
+			read lvds
+			case "$lvds" in
+			y) 
+				echo "22.Test Lvds= Pass" >> ./"$model"
+				lvds="##22##.Pass "
+				echo "<<< Finish Lvds Test --- $lvds <<<" > $outputport
+				;;
+			n) 
+				echo "22.Test Lvds= Fail" >> ./"$model"
+				lvds="##22##.Fail "
+				echo "<<< Finish Lvds Test --- $lvds <<<" > $outputport
+				;;
+			esac
+		;;
+	esac
+}
+
+func_3AXIS() {
+	echo -e "\n>>> Start Test 3AXIS >>>" > $outputport
+	case "$type" in
+		Wrapping_Machine)
+			echo "Please check 3AXIS : (y)->Pass ; (n)->Fail" > $outputport
+			./23-AXIS-TEST &
+			read axis
+			case "$axis" in
+			y) 
+				echo "23.Test 3AXIS= Pass" >> ./"$model"
+			  	axis="##23##.Pass "
+				echo "<<< Finish 3AXIS Test --- $axis <<<" > $outputport
+				killall 23-AXIS-TEST
+				;;
+			n) 
+			   	echo "23.Test 3AXIS= Fail" >> ./"$model"
+				axis="##23##.Fail "
+				echo "<<< Finish 3AXIS Test --- $axis <<<" > $outputport
+				killall 23-AXIS-TEST
+				;;
+			esac
+		;;
+	esac
+}
+
+func_TouchPanel() {
+	echo -e "\n>>> Start Test TouchPanel >>>" > $outputport
+	case "$type" in
+		Wrapping_Machine)
+			echo "Please check TouchPanel : (y)->Pass ; (n)->Fail" > $outputport
+			./24-TOUCHPANEL-TEST &
+			read tpanel
+			case "$tpanel" in
+			y) 
+				echo "24.Test TouchPanel= Pass" >> ./"$model"
+				tpanel="##24##.Pass "
+				echo "<<< Finish TouchPanel Test --- $tpanel <<<" > $outputport
+				killall 24-TOUCHPANEL-TEST
+				;;
+			n) 
+				echo "24.Test TouchPanel= Fail" >> ./"$model"
+				tpanel="##24##.Fail "
+				echo "<<< Finish TouchPanel Test --- $tpanel <<<" > $outputport
+				killall 24-TOUCHPANEL-TEST
+				;;
+			esac
+		;;
+	esac
+}
+
+func_RTC() {
+	echo -e "\n>>> Start Test RTC >>>" > $outputport
+	case "$type" in
+		Wrapping_Machine)
+			echo "Please check RTC : (y)->Pass ; (n)->Fail" > $outputport
+			read rtc
+			case "$rtc" in
+			y) 
+				echo "25.Test RTC= Pass" >> ./"$model"
+				rtc="##25##.Pass "
+				echo "<<< Finish RTC Test --- $rtc <<<" > $outputport
+				;;
+			n) 
+				echo "25.Test RTC= Fail" >> ./"$model"
+				rtc="##25##.Fail "
+				echo "<<< Finish RTC Test --- $rtc <<<" > $outputport
+				;;
+			esac
+		;;
+	esac
+}
+
+func_HW() {
+	echo -e "\n>>> Start Test HW >>>" > $outputport
+	case "$type" in
+		Wrapping_Machine)
+			echo "Please check HW : (y)->Pass ; (n)->Fail" > $outputport
+			read hw
+			case "$hw" in
+			y) 
+				echo "26.Test HW= Pass" >> ./"$model"
+				hw="##26##.Pass "
+				echo "<<< Finish HW Test --- $hw <<<" > $outputport
+				;;
+			n) 
+				echo "26.Test HW= Fail" >> ./"$model"
+				hw="##26##.Fail "
+				echo "<<< Finish HW Test --- $hw <<<" > $outputport
+				;;
+			esac
+		;;
+	esac
+}
+func_EXIT() {
+	case "$type" in
+		Wrapping_Machine)
+			echo "Save MP Test File Start." > $outputport
+			sleep 1
+			cat ./"$model" > $outputport
+#			cat ./"$model" | grep Number > $outputport
+#			cat ./"$model" | grep Test > $outputport
+			echo "===========END==========" > $outputport
+			sleep 1
+			;;
+		AEG-200 | TYPE-A-101 | TYPE-B-102 | TYPE-C-103 | TYPE-D-104)
+			echo "Exit" > $outputport
+			echo "$(date)" >> ./"$model"
+			udhcpc -i eth0 &
+			sleep 2
+
+			ethtimes=1
+			while [ $(ifconfig eth0 |grep inet | wc -l) = 0 ] && [ ! $ethtimes = $ethmaxtimes ]; do
+				sleep 3
+				ethtimes=$(expr $ethtimes + 1)
+			done
+
+			ftpget -u $ftpid -p $ftppw $ftpserver $type.log $type/$type.log
+			echo  "$type $model $ethaddr $(cat /etc/version) $(cat /sys/devices/platform/mcu_efm.0/mcu_version) $(date '+%Y/%m/%d %X') $count1 $count2 $count3 $count4 $count5 $error$zigbee$led$amodem$DS$buzzer$usb$wifi$ggg$gps$eth$bt$rs232$DDR$sdcard$gpio$rs485$cpu" >> ./$type.log
+			echo  "$type $model $ethaddr $(cat /etc/version) $(cat /sys/devices/platform/mcu_efm.0/mcu_version) $(date '+%Y/%m/%d %X') $count1 $count2 $count3 $count4 $count5 $error$zigbee$led$amodem$DS$buzzer$usb$wifi$ggg$gps$eth$bt$rs232$DDR$sdcard$gpio$rs485$cpu" >> ./.$type.log
+			ftpput -u $ftpid -p $ftppw $ftpserver $type/$model $model
+			ftpput -u $ftpid -p $ftppw $ftpserver $type/$type.log $type.log
+			;;
+	esac
+}
