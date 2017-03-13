@@ -1,0 +1,7 @@
+0118 - 0118	調整SI12 Ubuntu相關運作
+0101 - 0119	Compile pkgs for Q7 MPTool
+			Add Ubuntu system and bulding gstreamer pkgs (gst-plugins-xx)
+0120 - 0205	架設 Q7 - 3.14.28 ubuntu system mptest ( test ok)
+			轉給 QT (Fred)
+		測試Wrapping Machine, DDR test. (是否與 white screen 有關)
+0215 - 		測試 Quanmax Intel system 

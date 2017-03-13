@@ -1,0 +1,93 @@
+相關RELEASE細節.
+1.Q7-imx6-quad (Linux-xfce4, MPtest + QC-UI) 2013/10/14
+	mini-sdcard 開機
+	a. fdisk (/dev/sdc : uboot/ uImage/ parameter, /dev/sdc1 : rootfs)
+	b. mkfs.ext4 - /dev/sdc1
+	c. dd uboot/ uImage/ parameter
+	d. cp rootfs (rebuild : udev175以前/ ncurse5.3)
+	e. re-set uboot parameter : minisd card dev=2
+	f. cp (version/ mcu_version/ 85-usb-sdcard-insert)
+	g. MP_TEST_WINDOW (model name : imx6-linux) (MP_TEST_WINDOW_03+QC03)
+
+2014/11/12 : 日本橫濱Demo使用
+Q7 imx6 Qual (ubuntu-12.04-destop-base-gpu-gst.tar.bz2)
+	1. kernel/u-boot (使用之前 Ibase Q7 的source) MX6_LinuxBSP : Ibase-Q7(2014-08-07) => Change TEMPERATURE_HOT (80 -> 105)
+	2. file system : ubuntu-12.04-destop-base-gpu-gst.tar.bz2
+	3. SD卡開機, rm mmcblk0p1 資料, 將file system 直接tar入
+	4. 修改uboot參數, 使HDMI輸出
+	5. 修改 auto login ( 使用者直接登入)
+	6. 可以播放content (avi, mp4)
+	7. add script : 
+		#!/bin/sh
+		sudo gst-launch filesrc location=/home/rtx/001.MP4 typefind=true ! aiurdemux name=demux demux. ! queue max-size-buffers=0 max-size-time=0 ! vpudec ! mfw_v4lsink demux. ! queue max-size-buffers=0 max-size-time=0 ! beepdec ! audioconvert ! 'audio/x-raw-int, channels=2' ! alsasink device='hw:1,0'
+	8. 增加root權限, 或 sudo 不用passwd (使可以直接點icon,播放影片)
+	9. sudo visudo => 為rtx使用者 => rtx ALL = NOPASSWD: ALL
+	10. 確定影像 聲音 輸出正常.
+
+
+2015/03/16 : Q7 MP 200 pces (MP : 20150324)
+	1. rootfs : 使用(Wrapping-Machine)Simple file system for RUN-IN or MP-TEST include : 
+			led_test, stress, rtx_setenv, runin, rcS ..
+	2. Git 2015-03-16 10:46:20 / Parent: 629e696f47f0bf211f0146cea52d4cdc8ca1e9f1
+	3. kernel : for SPI Flash (MP_TEST)
+	4. uboot : 高溫DDR Issue, 更改 flash_header.S
+	5. MP_Test_Window_07 (MP_TEST)
+	6. 新增SPI - flash : en25q32b, check size大小.
+
+
+2015/04/24 : Volar112 Ver.2
+	0. Update EFM Firmware
+	1. MFG update firmware.	uboot/uImage/Ubuntu	(Ubuntu 使用後面)
+	2. cp 	out/include to /usr/include
+	 	out/lib/firmware	/lib/firmware
+		out/lib/modules		/lib/modules
+		depmod -a
+
+	3. rs232_touch driver : 
+		a. modify /usr/share/X11/xorg.conf.d/10-evdev.conf
+			 	Option		"InvertY"	"yes"
+        			Option		"SwapAxes"	"true"
+		b. cp -avrf 10-serialtouch.rules /etc/udev/rules.d/
+			chmod 777 /etc/udev/rules.d/10-serialtouch.rules
+		c. cp -avrf touchattach /usr/bin/
+		d. touchattach -rtouch /dev/ttymxc3 (/etc/rc.local)
+	4. MP_TEST : 
+		a. uboot - savenv (save uboot parameter)
+		b. sudo cp 90-usb-sdcard-insert.rules /etc/udev/rules.d/
+		c. sudo cp /mnt/mmcblk1p1/usr/bin/rtx_setenv /usr/bin/
+		d. touch /etc/version ; version : volar112.001
+		e. serial_number : 10 碼
+		f. MAC : 12 碼
+	5. Battery_TEST : 
+		a. cp Battery_TEST 
+		b. Battery_TEST 5
+
+	6. Suspend Issue :  加入 /etc/polkit-1/localauthority/90-mandatory.d/disable-suspend.pkla
+	7. Power_off : 加入 /etc/polkit-1/localauthority/50-local.d/usershutdown.pkla
+
+	8. ubuntu filesystem : sd卡開機, cp -avrf * /mnt/mmcblk0p1  (for firefox - youtobe -audio OK)
+		密碼 VIU1K
+
+2015/05/15 Q7+New Panel (Demo)
+	原Q7 firmware修改
+	0. modify uboot parameter : (800 x 600)
+		video=mxcfb0:dev=ldb,LDB-SGA,if=RGB666
+	1. /etc/inittab
+		::respawn:getty -L tty0 115200 vt100
+	2. /etc/securetty
+		add tty0
+	3. 帳號 : root / 沒有密碼
+
+2015/08/21 New Carrier board : release firmware
+	export ARCH=arm
+	export CROSS_COMPILE=/opt/freescale/usr/local/gcc-4.6.2-glibc-2.13-linaro-multilib-2011.12/fsl-linaro-toolchain/bin/arm-none-linux-gnueabi-
+	kernel : 
+		config : arch/arm/configs/imx6q_Q7_defconfig
+	uboot : 
+		config : include/configs/mx6q_q7.h
+
+2015/11/05 Q7 quad + New Carrier board : i.MX6 Q7 Kernel 3.14.28 ,Nihon Densan project (Demo)
+	1. linux-imx-3.10.x (2015-11-05)
+	2. u-boot-imx (RTX_V2015.04) (2015-10-26)
+
+

@@ -1,0 +1,102 @@
+VGA 殘影 : A6 (IMX6Q)
+	a. uboot 參數設定 : vedio=mxcfb0:dev=lcd,1024x769M@60,if=RGB24,bpp=16 vga=on (餵給kernel的參數)(決定配置 A)
+	b. kernel board_init設定 : ipuv3_fb_platform_data sabresd_fb_data []{
+			.disp_dev = "lcd",	
+			.interface_pix_fmt = IPU_PIX_FMT_RGB565,
+			.mode_str = "1024x768M@60",
+			.default_bpp = 16,					}	(決定配置 B)
+	c. EDID : read panel EDID	(決定配置 C)
+	d. mxc_lcdif.c (Driver) : 
+					static struct fb_videomode lcdif_modedb[]	(Default配置 : D)	
+					{
+					/* 800x480 @ 57 Hz , pixel clk @ 27MHz */
+					"CLAA-WVGA", 57, 800, 480, 37037, 40, 60, 10, 10, 20, 10,
+					FB_SYNC_CLK_LAT_FALL,
+					FB_VMODE_NONINTERLACED,
+					0,}, .....
+	e. imX6 -> VGA chip	:	VGA spec - data fetch看 rising edge, 因此 fix bug -> 拿掉 FB_SYNC_CLK_LAT_FALL(更改IMX6輸出為Rising_Edge)
+
+Audio 無聲 : Q7 (IMX6DL)
+	alsamixer
+		error ==>  Error opening terminal: vt100.
+		pkgs : ncurses (/usr/share/terminfo 缺少)
+		ncurses-5.9 ==> 改回 ncurse-5.3
+
+	aplay -D plughw:0,0 /unit_test/audio8k16S.wav -v
+		error ==>  aplay: pcm_write:1682: write error: Input/output error
+		board_init : mx6_q7_audio_data ==> .ext_port = 3 (要正確)
+		amixer set 'Jack Function' on(Headphone)
+
+HDMI 無輸出 : Q7 (IMX6DL)
+	fb data 在board-init 無註冊hdmi,,,(imx6q_add_ipuv3fb 對應) 
+	static struct ipuv3_fb_platform_data q7_fb_data[] = { setting@@@
+
+CTS / RTS 偵測不到 : Q7 (IMX6DUAL)
+		MX6DL_PAD_CSI0_DAT17__UART4_CTS,	(更動PING設定順序)
+		MX6DL_PAD_CSI0_DAT16__UART4_RTS,
+
+高溫問題 : Q7 (IMX53)
+	mmcblk0: error -84 transferring data, ---致死機
+		--> 初步認為, clock or voltage mistake
+	使用外卡開機,跑測試程式 -- OK
+
+HDMI/LVDS 雙輸出 : SBC (IMX6Q)
+	1. (Debug)kernel_imx/drivers/video/mxc/mxc_ipuv3_fb.c 619行 (列印相關訊息) printk("Alston : %s, ipu/di=%d/%d, xres/yres=%d/%d, left/right=%d/%d, hsync/vsync=%d/%d, upper/lower=%d/%d\n", mxc_fbi->dispdrv->drv->name, mxc_fbi->ipu_id, mxc_fbi->ipu_di, fbi->var.xres, fbi->var.yres, fbi->var.left_margin, fbi->var.right_margin, fbi->var.hsync_len, fbi->var.vsync_len, fbi->var.upper_margin, fbi->var.lower_margin);
+	2. (Debug)imx_add_ipuv3_fb : 
+			根據 ipuv3_fb_platform_data q7_fb_data[]及fbmem的設定 註冊 "mxc_sdc_fb"個數
+			列印相關訊息 : printk(" %s id=%d \n",pdata->disp_dev,id);
+	3. mxc_ipuv3_fb.c 600行 : 卡在此處
+	 	if (mxc_fbi->next_blank != FB_BLANK_UNBLANK){
+	 		return retval;
+
+	4. mxc_ipuv3_fb.c 2490行 : 目前先mark掉
+//		if (pdev->id == 0){
+ 			mxcfbi->cur_blank = mxcfbi->next_blank = FB_BLANK_UNBLANK;
+		else
+			mxcfbi->cur_blank = mxcfbi->next_blank = FB_BLANK_POWERDOWN;
+//		}else{
+//			mxcfbi->cur_blank = mxcfbi->next_blank = FB_BLANK_POWERDOWN;
+//		}
+
+	5. 其他設定 : (fb0=hdmi/fb2=ldvbs)
+		a. uboot parameter : setenv bootargs ${bootargs} video=mxcfb0:dev=hdmi,1024x768M@60,if=RGB24,bpp=16 video=mxcfb1:dev=ldb,SRC-PPP,if=RGB666 video=mxcfb2:off
+		b. 	static struct ipuv3_fb_platform_data q7_fb_data[] = {
+				{ /*fb0*/
+				.disp_dev = "hdmi",
+				.interface_pix_fmt = IPU_PIX_FMT_RGB24,
+				.mode_str = "1920x1080M@60",
+				.default_bpp = 32,
+				.int_clk = false,
+				.late_init = false,
+				}, {
+				.disp_dev = "ldb",
+				.interface_pix_fmt = IPU_PIX_FMT_RGB666,
+				.mode_str = "SRC-PPP",
+				.default_bpp = 16,
+				.int_clk = false,
+				.late_init = false,
+				},
+			};
+		c.
+			static struct fsl_mxc_hdmi_core_platform_data hdmi_core_data = {
+				.ipu_id = 0,
+				.disp_id = 0,
+			};
+			static struct fsl_mxc_ldb_platform_data ldb_data = {
+				.ipu_id = 1,
+				.disp_id = 0,
+				.ext_ref = 1,
+				.mode = LDB_SEP0,
+				.sec_ipu_id = 0,
+				.sec_disp_id = 1,
+				.panel_gpio_set = mx6q_q7_ldb_gpio_set ,
+			};
+
+system issue :  : Wrapping_Machine(DualLite)
+	Mounting filesystems
+	EXT4-fs (mmcblk0p1): re-mounted. Opts: (null)
+	cp: write error: No space left on device
+	cp: write error: No space left on device
+	cp: write error: No space left on device
+	==> 更改 /etc/rc.d/rc.conf : export TMPFS_SIZE="512k" -> "128m"(更改512K -> 128M)
+

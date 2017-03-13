@@ -1,0 +1,231 @@
+20151016
+		ALF	
+			- Bishop
+				. Low power (report)
+				.BT 
+			- Bishop2  (SOC IC)
+			
+		AcSip
+			- editor (.新 .大 .泛 )
+			- 泛用型
+			- 八達通
+		SMTT
+			- Volar 111 +	MP_Tool
+			- VU500(Volar114)
+				. AcSip module
+				. Android 4.4.x
+		RoyMark
+			- Rlu-player 優化
+			- Rlu-player (Linux version)
+				. flash
+				. widege
+				. ppt
+		Lineo
+			- Q7 kernel 3.14.28
+				. MP test
+		USA
+			- Q7 pico
+
+
+SI-12  ubuntu 安裝
+	. WDT
+	. Java Test
+	. Package install
+	. read only
+	. system update information mark
+	. error message mark
+	. internet address setting
+
+Q7 
+	. cpu number issue
+	. new carry board - test / check
+
+Q7-PICO
+
+
+
+
+20150814 -
+	AcSip
+		1. China	1.0 -> 2.0
+		2. 新加坡,馬來西亞	Touch
+		3. 香港(八達通) 販賣機
+		4. 工廠
+		5. Editor	Linux/Windows/A6
+		6. Web Browser without X (QT, CEF -> Chrome Em,, Direct+fb+firefox)
+		7. Java VM
+	SMTT
+		1. 111+	ubuntu server 14.04 (armhf)
+			ubuntu desktop 12.04
+			ubuntu server 12.04 (armel)
+			yocto gcc4.9 armhf + xorg viv vedio driver
+	Roymark
+		1. A6-Android
+		2. 機場	-> SI-12(iBase) - Linux API
+					- Windows  (	w32api,  (Base GUI)
+							com+, 	 (GUI)
+							WMI, 	 (Driver)
+							ActionX, (Network)
+							.Net)	 (Network)
+						API control HW (Interface)
+						Java OpnenGL
+						Java media player
+					- Android
+		3. 中國移動
+
+
+20150724 - 
+	AcSip	馬來西亞/香港/上海	Play Image & Video, Editor Sample
+	SI-12	Demo, 產品化 - partition/ ro / rw, system fine tune, upgrade, recovery, mp(SSD 64G), customer App
+		Ubuntu:
+			Desktop
+			Server
+			Min System
+		Android:
+	MCU
+		Mbed
+	SMTT
+		114(Solo,Dual Lite)	:	Android
+		111P
+
+20150717 -
+	AP , System規劃 (JP, 中國) - Roymark, Acsip (方向)
+	MCU(mbed), BSP, SMTT  ---  XX
+
+20150605 - 
+	BISHOP 2 -- 所有權
+	AcSip - ubuntu java
+	Roinmake - 
+	AP - 變化多..
+
+20150529 - 
+	ACSIP - +-*/
+ 
+20150522 -
+	Android Studio 編輯器 (開發Android, 似eclipse)
+	ACSIP - 相關基本定義, 元素, 相容產品, 實際裝置, 擇library(gstream - libvpu +libalsa)
+ 	圖像 - 	GPU
+		2DE - 	OPENVG(X),G2D
+		3D  - OPENGL ES1/ ES2/ ES3
+	media-player - *.json 
+		Web - text-to-image
+	LIST/MAP 語法
+
+
+20140515 -
+	DBUS - IPC,行程之間溝通的工具. (client - master)
+	ASIP - ..
+
+20150410 - 
+	Video out switch : A6 VGA/ HDMI(uboot)
+	RTX Boot-loader : DDR(Auto), 加密, emmc read/write function, i2c function
+	Gateway :
+	Media-Player :
+	MQTT :
+
+20150327 - 
+	MQTT - 介紹, 使用, ubuntu compile envirment, build tool_chain 
+
+20150320 - 
+	ToolChain/ CrossCompile : 移除XX IDE界面, build option (參數調整) 大同小異.
+	rootfs/usr/include
+		/usr/lib
+		/lib
+	/usr/local/lib
+	/usr/local/include
+	/usr/share/pkgconfig
+	kernel include systemfile header	/usr/src/linux	syscall
+	bsae /opt/freescale/..lib , include , include/linux(原生帶的)
+
+20150313 -
+	MQTT protocol (A6/AEG-300)  - Ebed (ARM MCU)
+	USB-S-BOX
+	LPC
+
+20150213 -
+	AcSip 多核問題(SMP) ：3.0.35 -> 3.0.101
+	efm32
+	netBSD
+
+20150206 - 
+	AcSip 要準備
+	Mp
+	NetBSD
+		src - build.sh
+		xsrc - 
+
+20150130 - 
+	feng office - 使用
+		gitolite 安裝
+		參考網站：
+		http://www.bigfastblog.com/gitolite-installation-step-by-step
+		http://gitolite.com/gitolite/install.html
+ 
+		1. 新增 gitolite 使用者
+			$ sudo adduser \
+			--system \
+			--shell /bin/bash \
+			--gecos 'git version control' \
+			--group \
+			--disabled-password \
+			--home /home/gitolite gitolite
+ 
+			[Note] 在實作時，會重新設定 gitolite 的密碼，因為 ubuntu 不讓使用者直接切換進入無設密碼的使用者
+		2. 製作 gitolite 的 public key，這部份直接使用管理者所製作好的 key，並不直接在 server 上另外製作
+		3. 安裝 git 相關工具
+			$ sudo apt-get install git git-core
+		4. 切換至 gitolite 使用者
+			$ sudo su gitolite
+		5. 下載 gitolite
+			$ git clone git://github.com/sitaramc/gitolite
+		6. 安裝 gitolite
+			$ mkdir -p /home/gitolite/bin
+			$ gitolite/install /home/gitolite/bin
+		7. 初始管理者的 ssl key
+			$ gitolite setup -pk /home/gitolite/tmp/****.pub
+		8. 完成
+	SecurityBox : 檔案傳輸問題
+		Virture Disk(PC) - Security Box - BankBox
+		folder - .iso
+
+
+20150123 - 
+	Git server : https://10.65.162.95/gitweb/
+	生產資料 : \\10.65.162.95\data	rtx/admin
+	.git : url 要更改路徑
+
+	AcSip : path: App/Ubuntu/media-player.git
+
+	https://10.65.162.95/pydio
+	https://10.65.162.95/bug/report/ 還在想
+	----------------------------------------------------------------
+	AcSip 報告SPEC
+
+20150116 - 
+	IIJ(NetBSD) -  日本電車系統
+			gibhub.com - IIJ=NetBSD
+
+	AcSip
+
+	Icom	
+		DDR
+			kernel3.10.17
+	RTX
+		ubuntu14.04	-	mux/compizx(3D) ... fail
+			kernel3.10.17
+		LXDE
+		ubuntu server
+		YOCTO 200G/8G	-	QT (X11, without-X11)
+		openwrt ?
+
+	web GUI - 	firefox
+			chrome	web-kids 3.0 (解譯) - opengl1.0/opengl2.0	
+			QtWeb 	(flash player/ youtube) - (arm plugin/g--, gstreamer plugin web)
+
+
+	compile :
+	HOST				TARGET
+	ARM-LINUX-EABI-GCC		GCC					
+	-MARM -cdn--			X
+
+

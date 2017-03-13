@@ -1,0 +1,151 @@
+********************************************************************************************************
+***		Bootloader, Kernel and NFS from SD card  ####### R092  #######
+********************************************************************************************************
+dd if=uramdisk.img of=ramdisk.img.gz skip=64 bs=1
+gunzip ramdisk.img.gz; mkdir ramdisk; cd ramdisk; cpio -i < ../ramdisk.img
+find . | cpio --create --format='newc' | gzip > ../ramdisk.img; cd ..
+mkimage -A arm -O linux -T ramdisk -C none -a 0x11000000 -n "Android Root Filesystem" -d ./ramdisk.img ./uramdisk.img
+mkbootimg --kernel zImage --ramdisk ramdisk.img --base 0x10800000 --board mx6q_sabresd -o boot.img
+
+##### write block
+sudo dd if=u-boot.bin of=/dev/mmcblk0 bs=1024 skip=1 seek=1	---write at 1KB address
+sudo dd if=uImage of=/dev/mmcblk0 bs=1M seek=1				---write at 1MB address
+sudo dd if=engramdisk.img of=/dev/mmcblk0 bs=1M seek=8 		---write at 8MB address
+
+##### Enter the mini filesystem
+setenv bootcmd 'run bootcmd_linux'
+setenv bootcmd_linux 'run bootcmd_linux1 bootcmd_linux2'
+setenv bootcmd_linux1 'setenv bootargs console=ttymxc0,115200 video=mxcfb0:dev=lcd,${def_video},if=RGB24,bpp=32 video=mxcfb1:off video=mxcfb2:off fbmem=28M vmalloc=400M root=/dev/ram0 rdinit=/sbin/init'
+setenv bootcmd_linux2 'mmc dev 1;mmc read ${loadaddr} 0x800 0x2800;mmc read ${rd_loadaddr} 0x4000 0x1800;bootm ${loadaddr} ${rd_loadaddr}'
+setenv bootcmd_linux2 'mmc dev 2;mmc read ${loadaddr} 0x800 0x2800;mmc read ${rd_loadaddr} 0x4000 0x1800;bootm ${loadaddr} ${rd_loadaddr}'
+run bootcmd_linux
+
+setenv bootcmd 'run bootcmd_linux'
+setenv bootcmd_linux 'run bootcmd_linux1 bootcmd_linux2'
+setenv bootcmd_linux1 'setenv bootargs console=ttymxc0,115200 video=mxcfb0:dev=lcd,${def_video},if=RGB24,bpp=32 video=mxcfb1:off video=mxcfb2:off fbmem=28M vmalloc=400M init=/sbin/init root=/dev/mmcblk1p1 rootwait rw''
+setenv bootcmd_linux2 'mmc dev 1;mmc read ${loadaddr} 0x800 0x2800;mmc read ${rd_loadaddr} 0x4000 0x1800;bootm ${loadaddr} ${rd_loadaddr}'
+setenv bootcmd_linux2 'mmc dev 2;mmc read ${loadaddr} 0x800 0x2800;mmc read ${rd_loadaddr} 0x4000 0x1800;bootm ${loadaddr} ${rd_loadaddr}'
+run bootcmd_linux
+
+
+##### Enter the recovery filesystem
+setenv bootcmd_test 'run recovery01 recovery02 recovery03'
+setenv recovery01 'run bootargs_base set_display bootargs_console'
+setenv recovery02 'setenv bootargs ${bootargs} init=/init root=/dev/mmcblk1p1 rootwait rw'
+setenv recovery03 'mmc dev 3;mmc read ${loadaddr} 0x800 0x2800;bootm'
+
+##### linux
+setenv vga 'setenv bootargs ${bootargs} video=mxcfb0:dev=lcd,VGA,if=RGB24,bpp=32 video=mxcfb1:off video=mxcfb2:off fbmem=28M vmalloc=400M'
+setenv set_display 'run vga'
+setenv hdmi 'setenv bootargs ${bootargs} video=mxcfb0:dev=hdmi,1920x1080M@60,if=RGB24,bpp=32 video=mxcfb1:off video=mxcfb2:off fbmem=28M vmalloc=400M'
+setenv set_display 'run hdmi'
+setenv bootargs_base 'setenv bootargs console=ttymxc0,115200'
+setenv bootargs_mmc 'setenv bootargs ${bootargs} root=/dev/mmcblk1p1 rootfstype=ext4 rootwait rw'
+setenv bootread_mmc 'mmc dev 3;mmc read ${loadaddr} 0x800 0x2800;'
+setenv bootcmd_mmc 'run bootargs_base bootargs_mmc set_display bootread_mmc;bootm'
+setenv bootcmd 'run bootcmd_mmc'
+
+##### better-initramfs
+setenv bootargs_mmc 'setenv bootargs ${bootargs} rootdelay=1 rescueshell luks luks_keyfile=keyfile enc_root=/dev/mmcblk1p1:/dev/mmcblk1p2 root=/dev/mapper/enc_root rootfstype=ext4 rootwait rw'
+setenv bootcmd 'run bootcmd_mmc'
+setenv bootcmd_mmc 'run bootargs_base set_display bootargs_mmc bootread_mmc;bootm ${loadaddr} ${rd_loadaddr}'
+setenv bootargs_base 'setenv bootargs console=ttymxc0,115200'
+setenv set_display 'run vga'
+setenv vga 'setenv bootargs ${bootargs} video=mxcfb0:dev=lcd,VGA,if=RGB24,bpp=32 video=mxcfb1:off video=mxcfb2:off fbmem=28M vmalloc=400M'
+setenv bootargs_mmc 'setenv bootargs ${bootargs} luks enc_root=/dev/mmcblk0p1 root=/dev/mapper/enc_root rootfstype=ext4 rootwait rw'
+setenv bootread_mmc 'mmc dev 3;mmc read ${loadaddr} 0x800 0x2800;mmc reada ${rd_loadaddr} 0x4000 0xDF0;'
+
+##### Sign APK
+java -jar signapk.jar platform.x509.pem platform.pk8 your-app.apk your-signed-app.apk
+java -jar signapk.jar platform.x509.pem platform.pk8 OtaAppActivity.apk OtaAppActivity-sign.apk
+
+##### DI0/1 output setting
+setenv hdmi 'setenv bootargs ${bootargs} video=mxcfb0:dev=hdmi,1920x1080M@60,if=RGB24,bpp=32 video=mxcfb1:off video=mxcfb2:off fbmem=28M vmalloc=400M'
+setenv vga 'setenv bootargs ${bootargs} video=mxcfb0:dev=lcd,VGA,if=RGB24,bpp=32 video=mxcfb1:off video=mxcfb2:off fbmem=28M vmalloc=400M'
+setenv ldb 'setenv bootargs ${bootargs} video=mxcfb0:dev=ldb,LDB-XGA,if=RGB666,bpp=32 ldb=sin0 video=mxcfb1:off video=mxcfb2:off fbmem=28M vmalloc=400M'
+setenv dual-hdmi 'setenv bootargs ${bootargs} video=mxcfb0:dev=hdmi,1920x1080M@60,if=RGB24,bpp=32 video=mxcfb1:dev=lcd,VGA,if=RGB24,bpp=32 video=mxcfb2:off fbmem=28M,28M vmalloc=400M'
+setenv hdmi-lcd 'setenv bootargs ${bootargs} video=mxcfb0:dev=hdmi,1920x1080M@60,if=RGB24,bpp=32 video=mxcfb1:dev=lcd,1920x1080M@60,if=RGB24,bpp=32 video=mxcfb2:off fbmem=28M,28M vmalloc=400M'
+setenv lcd-hdmi 'setenv bootargs ${bootargs} video=mxcfb0:dev=lcd,VGA,if=RGB24,bpp=32 video=mxcfb1:dev=hdmi,1920x1080M@60,if=RGB24,bpp=32 video=mxcfb2:off fbmem=28M,28M vmalloc=400M'
+setenv dual-ldb 'setenv bootargs ${bootargs} video=mxcfb0:dev=ldb,LDB-XGA,if=RGB666,bpp=32 video=mxcfb1:dev=hdmi,1920x1080M@60,if=RGB24,bpp=32 video=mxcfb2:off fbmem=28M,28M vmalloc=400M'
+setenv ldb-hdmi 'setenv bootargs ${bootargs} video=mxcfb0:dev=ldb,LDB-1080P60,if=RGB666,bpp=32 video=mxcfb1:dev=hdmi,1920x1080M@60,if=RGB24,bpp=32 video=mxcfb2:off fbmem=28M,28M vmalloc=400M'
+
+setenv dual-hdmi 'setenv bootargs ${bootargs} video=mxcfb0:dev=hdmi,1920x1080M@60,if=RGB24,bpp=32 video=mxcfb1:dev=lcd,${def_video},if=RGB24,bpp=32 video=mxcfb2:off fbmem=128M,128M vmalloc=400M gpumem=512M'
+
+##### Write image from ethernet and bootp from ethernet.
+setenv ethaddr 00:0C:6E:CE:21:88
+setenv serverip 10.65.163.75
+setenv fastboot_addr 0x10800000
+setenv wdev 1
+
+#write image to mmc device
+setenv wuboot 'mmc dev ${wdev};bootp ${fastboot_addr} ${serverip}:u-boot-no-padding.bin;mmc write ${fastboot_addr} 2 200'
+setenv wuImage 'mmc dev ${wdev};bootp ${fastboot_addr} ${serverip}:uImage;mmc write ${fastboot_addr} 6800 2800'
+setenv wuramdisk 'mmc dev ${wdev};bootp ${fastboot_addr} ${serverip}:uramdisk.img;mmc write ${fastboot_addr} 4000 2000'
+
+
+##### Debug message area
+#define dev_info(dev, format, arg...)	printk(KERN_INFO "%s %s: " format ,dev_driver_string(dev) ,dev_name(dev) ,## arg)
+
+#define debug(mstr,a...) \
+{ \
+    	char cBuf[256] ; \
+    	char cBuf1[256] ; \
+    	strcpy( cBuf , "echo \"" ) ;\
+    	sprintf( cBuf1 , mstr , a );\
+    	strcat( cBuf , cBuf1 ) ;\
+    	strcat( cBuf , "\" >> /mnt/sdcard/service.txt") ;\
+    	system( cBuf ) ;\
+}
+debug("%s", msg);
+
+{
+    FILE *ofp ;
+    ofp = fopen("/dev/debug.txt","a+");
+    if (ofp)
+    {
+    	fprintf(ofp,"%s\n",args[1]) ;
+    	fclose(ofp) ;
+	}
+}
+
+# 若ptr定義為pointer時，在將memory內的value print出來。
+#若是char *ptr時就不用這麼處理，因為string 都是以'/0'為結尾。printf看到string即會打印到'/0'來結束。
+int *ptr;
+char cTmp[128] ;
+for ( iLoop = 0 ; iLoop < 20 ; iLoop++)
+{
+	sprintf( &cTmp[iLoop*3] , "%02X," , *(ptr+iLoop) ) ;
+}
+ALOGI("%s",  cTmp);
+
+
+
+##### Test area
+mount -o remount,rw /dev/block/mmcblk0p5 /system
+logcat > /udisk/log.txt
+adb shell am broadcast -a android.intent.action.BOOT_COMPLETED
+adb shell am broadcast -a android.intent.action.BOOT_COMPLETED -c android.intent.category.HOME -n package_name/class_name
+adb shell am broadcast -a android.intent.action.BOOT_COMPLETED -c android.intent.category.LAUNCHER -n reboot.control/AlarmBroadcase
+adb shell am start -n com.CompanyName.ProductName/com.unity3d.player.UnityPlayerProxyActivity
+adb shell am start -n com.arusiro.FISHMASTER/com.unity3d.player.UnityPlayerProxyActivity
+adb shell am start -n com.example.getethernetmac/.MainActivity
+
+##get shared_prefs and sqlite database
+adb pull /data/data/com.example.reboot_tools/shared_prefs/REBOOT_PREF.xml REBOOT_PREF.xml
+adb shell 'sqlite3 /data/data/com.android.providers.settings/databases/settings.db ".dump" > /sdcard/settings.sql'
+adb pull /sdcard/settings.sql settings.sql
+
+echo 1 4 1 7 > /proc/sys/kernel/printk
+
+echo 1 > /sys/class/graphics/fb0/blank
+echo 0 > /sys/class/graphics/fb0/blank
+
+echo 82 > /sys/class/thermal/thermal_zone0/trip_point_1_temp
+echo 55 > /sys/class/thermal/thermal_zone0/trip_point_2_temp
+cat /sys/class/thermal/thermal_zone0/temp
+
+cat /d/clock/osc_clk/pll5_video_main_clk/ipu2_di_clk_0/rate
+cat /d/clock/osc_clk/pll3_usb_otg_main_clk/gpu2d_core_clk/rate
+cat /d/clock/osc_clk/pll1_sys_main_clk/rate
+cat /d/clock/osc_clk/pll1_sys_main_clk/pll1_sw_clk/rate
+

@@ -1,0 +1,255 @@
+★★★★PKGS★★★★ 
+ncurses-5.9 	: Add	--without-ada
+			置換 ncurses-5.9.spec
+			砍掉 ncurses-5.9 folder, rebuild
+			install : /usr/share/tabset , /usr/share/terminfo
+			downgraded --> ncurses-5.3
+
+		: ./generate: error while loading shared libraries: libc.so.6: cannot open shared object file: No such file or directory
+			換其他已經build完成的spec來置換.
+
+
+
+alsa-utils-1.0.24.2 : symbol lookup error: alsamixer: undefined symbol: set_escdelay 
+			downgraded alsa-utils
+alsa-utils-1.0.27.2 : /bin/bash: xmlto: command not found
+			=> xmlto(Synaptic install)
+
+dbus-1		: 	version	>=1.4	
+			PKG_DBUS=dbus-1.6.4
+
+usbutils	:	usbutils.spec -> BuildRequires   : libusb0 <--更改
+
+glib2-2.32.4	:	Add	glib2-2.32.4.spec	(set var length)
+			ac_cv_alignof_guint32=4 \
+			ac_cv_alignof_guint64=8 \
+			ac_cv_alignof_unsigned_long=4 \
+
+libxcb-1.9	：	Failed to load the xcbgen Python package!
+			apt-get install python-xcbgen
+
+libXtst-1.2.0	：	error: package libXtst is not relocateable
+			libXtst-1.2.0.spec  ==>  增加 Prefix          : %{pfx}
+
+wayland-1.0.3	:	wayland-private.h:28:17: fatal error: ffi.h: No such file or directory
+			libffi-3.0.13.spec  ==>  加入 (搬動include資料夾,到對的位置)
+			mkdir -p $RPM_BUILD_ROOT/%{pfx}/usr/include
+			mv $RPM_BUILD_ROOT/%{pfx}/usr/lib/libffi-3.0.13/include/* $RPM_BUILD_ROOT/%{pfx}/usr/include/.
+			rm -rf $RPM_BUILD_ROOT/%{pfx}/usr/lib/libffi-3.0.13
+
+glibc-2.13	:	No rule to make target `...rpm/BUILD/glibc-2.13/build-arm/Versions.all'
+			Synaptic 套件管理程式 : 安裝 gawk
+
+gtk+-2.20.0	:
+			io-png.c: In function 'png_simple_error_callback':
+			io-png.c:187:30: error: dereferencing pointer to incomplete type
+			io-png.c: In function 'gdk_pixbuf__png_image_load':
+			io-png.c:291:6: error: dereferencing pointer to incomplete type
+				=> gtk 2.24.20
+			decompose-bits.c:21:35: fatal error: gdk-pixbuf/gdk-pixbuf.h: No such file or directory
+				=>gdk-pixbuf-2.28.2
+			gtkpango.c:199:17: error: 'PangoRendererClass' has no member named 'draw_glyph_item'
+				=> pango 1.34.1
+			pangofc-fontmap.c:1378:12: error: 'FC_WEIGHT_EXTRABLACK' undeclared
+				=>freetype 2.5.0.1
+			pango-ot-private.h:28:19: fatal error: hb-ot.h: No such file or directory
+				=>harfbuzz-0.9.18.........................................................未完!!
+
+xfce-utils-4.8.0 :
+			libtool: link: cannot find the library `/usr/lib/libstartup-notification-1.la' or unhandled argument 
+						`/usr/lib/libstartup-notification-1.la'
+			spec 增加=> find $RPM_BUILD_ROOT/%{pfx}/%{_prefix}/lib/ -name "*.la" | xargs rm -f
+			將 .la file 砍掉
+
+libxfce4util-4.8.1 : checking whether putenv() implementation is broken... configure: error: 
+			-> 更改configure檔
+
+xfce4-session-4.8.0 : libcairo.so: undefined reference to `glDrawArrays@VERSION'
+			=> kill cairo pkgs(rebuild cairo pkgs)
+
+thunar-1.2.0	:
+			thunar-sbr-replace-renamer.c:192:20: error: 'PCRE_CONFIG_UTF8' undeclared (first use in this function
+			=> 重新build pcre pkgs.
+
+atk-1.2.0	: atk/atkstate.h:171:1: error: unknown type name 'G_CONST_RETURN'
+			=> atk-2.8.0
+
+udev-175	: configure: error: libacl not found
+			=> acl-2.2.52 要勾選
+
+mesalib-9.1.6	: configure: error: LLVM is required to build Gallium R300 on x86 and x86_64
+			=> Synaptic 套件管理程式 : 安裝llvm
+
+GConf-dbus 	: libfontconfig.so: undefined reference to `XML_ErrorString' .. 
+			make[3]: *** [gconf-sanity-check-2] Error 1
+			=>  ./configure 後加 LIBS=-lexpat
+
+fvwm-2.6.3	: configure: error: stdarg.h and vfprintf required
+
+parole-0.5.2 	: *** The required package libxfconf-0 was found on your system,
+			xfconf-4.8 >= 4.10 
+			=>降版本 parole-0.3.0
+
+xfcalendar-4.2.4 : checking for libxfce4mcs-client-1.0 >= 4.2.0... not found
+			=> libxfce4mcs-4.4.2 OK
+		   checking for dbh-1.0 >= 1.0... not found
+			=> dbh_1.0.24
+
+xfce4-mixer-4.10.0 : checking for unique-1.0 >= 1.1... not found
+			=> add unique-1.0 pkgs
+
+keybinder-0.3.0	: configure: error: could not find Python headers
+			=> 判斷式全mark掉  #as_fn_error $? "could not find Python headers" "$LINENO" 5(使用以下解決)
+			+--disable-python \
+			+--disable-lua \
+
+hal-0.5.14	: 捨棄..需要udev,而會造成版本衝突
+
+libisofs-1.2.6	: relocation R_ARM_MOVW_ABS_NC against `a local symbol' can not be used when making a shared object; recompile with -fPIC
+			=>??
+
+xfce4-themes-4.0.6 : checking for xfce4-panel-1.0 >= 4.0.0... Package xfce4-panel-1.0 was not found in the pkg-config search path. Perhaps you 				should add the directory containing `xfce4-panel-1.0.pc' to the PKG_CONFIG_PATH environment variable No 			package 'xfce4-panel-1.0' found
+			=> xfce4-panel-4.8.spec : 加入cp $RPM_BUILD_ROOT/%{pfx}/usr/lib/pkgconfig/libxfce4panel-1.0.pc 									$RPM_BUILD_ROOT/%{pfx}/usr/lib/pkgconfig/xfce4-panel-1.0.pc
+
+NetworkManager-0.9.4.0 : checking for /etc/fedora-release... configure: error: cannot check for file existence when cross compiling
+				error: Bad exit status from /home/retronix/work/Linux/MX6_LinuxBSP/tmp/rpm-tmp.34401 (%build)
+			=>	ac_cv_file__etc_fedora_release=no \
+				ac_cv_file__etc_mandriva_release=no \
+				ac_cv_file__etc_debian_version=no \
+				ac_cv_file__etc_redhat_release=no \
+				ac_cv_file__etc_SuSE_release=no \
+				ac_cv_file__etc_gentoo_release=no \
+				ac_cv_file__etc_arch_release=yes \
+				ac_cv_file__etc_slackware_version=no \
+				ac_cv_file__etc_frugalware_release=no \
+				ac_cv_file__etc_pardus_release=no \
+				ac_cv_file__etc_linexa_release=no \
+				ac_cv_file__etc_exherbo_release=no \
+			=> 需gudev1.0 --> 更改 udev.spec 拿掉 --disable-gudev .
+			=> Package libnl-1 was not found in the pkg-config search path.
+				=> build libnl pkgs, 改變.spec 產生 rootfs/usr/lib/pkgconfig/libnl-1.pc
+			=> Alternatively, you may set the environment variables NSS_CFLAGS
+				and NSS_LIBS to avoid the need to call pkg-config.
+				=> networkmanager.spec  加入 NSS_CFLAGS=-I$DEV_IMAGE/usr/include  NSS_LIBS="-L$DEV_IMAGE/usr/lib -lnss"
+				=> Perhaps you should add the directory containing `nss.pc'
+					=> nss.spec add nss.pc
+			=>error: couldn't find pppd.h. pppd development headers are required.
+				=> ac_cv_header_pppd_pppd_h=yes	\
+			=>nm-param-spec-specialized.c:396:2: error: 'g_value_array_get_nth' is deprecated (declared at 
+			  /home/retronix/work/Linux/MX6_LinuxBSP/rootfs/usr/include/glib-2.0/gobject/gvaluearray.h:65): 
+			  Use 'GArray' instead [-Werror=deprecated-declarations]
+				=> glib2 rebuild
+			=>crypto_nss.c:29:20: fatal error: prinit.h: No such file or directory
+
+gobject-introspection-1.36.0 :  checking for headers required to compile python extensions... not found
+				configure: error: Python headers not found
+			=> 	#if ac_fn_c_try_cpp "$LINENO"; then :
+				#  { $as_echo "$as_me:${as_lineno-$LINENO}: result: found" >&5
+				#$as_echo "found" >&6; }
+				#
+				#else
+				#  { $as_echo "$as_me:${as_lineno-$LINENO}: result: not found" >&5
+				#$as_echo "not found" >&6; }
+				#as_fn_error $? "Python headers not found" "$LINENO" 5
+				#fi
+			=> ????
+
+gnome-vfs-2.24.1	: checking for posix getpwuid_r... configure: error: in `/home/retronix/work/Linux/MX6_LinuxBSP/rpm
+				/BUILD/gnome-	vfs-2.24.4':
+				configure: error: cannot run test program while cross compiling
+			=> ac_cv_func_posix_getpwuid_r=no	\
+			 error: unknown type name 'GStaticMutex'
+			=> 改寫function , add patch
+			
+
+libbonobo-2.32.1	: /lib/ld-linux.so.3: No such file or directory
+			=> ln -s /usr/arm-linux-gnueabi/lib/ld-linux.so.3 /lib/ld-linux.so.3
+			orbit-idl-2: error while loading shared libraries: libIDL-2.so.0: cannot open shared object file: No such file or directory
+			=> make ORBIT_IDL=/usr/bin/orbit-idl-2
+			error: unknown type name 'GStaticRecMutex'
+
+libcanberra-0.30-0	: libtool: install: error: relink `libcanberra-gtk-module.la' with the above command before installing it
+			make[2]: *** [install-gtkmoduleLTLIBRARIES] Error 1
+				=> rebuild libtool
+				=> rebuild vorbisfile
+				=> 砍掉 libcanberra-0.30-0 rebuild
+
+gnome-keyring-2.24.1	: error: 'LIBTASN1_VERSION' undeclared
+			=> add libtasn1 pkgs
+			=> 2.30.3
+				=>ac_cv_file__dev_random=no	\
+				=>ac_cv_path_ASN1PARSER=yes	\
+			warning: libgp11.so.0, needed by ../../gcr/.libs/libgcr.so, not found (try using -rpath or -rpath-link)
+			=> 3.2.2 + patch
+
+libgnome-keyring-3.6.0	: /lib/x86_64-linux-gnu/libpthread.so.0: file not recognized: File format not recognized
+			=>	--with-libgcrypt-prefix=${DEV_IMAGE}/%{_prefix}
+
+				
+libbonoboui-2.24.0	: glib-2.0/glib/garray.h:31:2: error: #error "Only <glib.h> can be included directly."
+
+			elector-util.lo bonobo-file-selector-util.c
+			make[2]: *** [bonobo-a11y.lo] Error 1
+			==> 2.24.5 OK
+
+gnome-menus-3.6.0	: g-ir-scanner", line 44, in <module>  from giscanner.scannermain import scanner_main
+			=>  --enable-introspection=no (disable)
+
+
+php-5.3.10		: /lib/ld-linux-armhf.so.3: No such file or directory
+
+python-2.7.3		: /lib/ld-linux-armhf.so.3: No such file or directory
+			=>	sudo ln -s /usr/arm-linux-gnueabi/lib/ld-linux.so.3 /lib/ld-linux-armhf.so.3
+			: libpthread.so.0: cannot open shared object file: No such file or directory
+			=>	XX  -> 換了一包 pkgs.(BISHOP)
+			: gdbm-ndbm.h: No such file or directory
+			=>libgdbm-dev (host 安裝)
+			: fatal error: openssl/evp.h
+			=> installed libssl-dev package (host 安裝)
+			: fatal error: db.h: No such file or directory
+			=> libdb-dev (host 安裝)
+			: bsddb.c:699:14: error: 'DB_NOSERVER_HOME' undeclared 
+			=> libdb5.1-dev (host 安裝)
+			: readline.c:889:24: error: 'Function' undeclared
+			=> modify readline.c 檔案 (patch)
+			: -ldb-4 file 缺
+			=> check => /usr/lib/libdb-4.so -> /usr/lib/x86_64-linux-gnu/libdb-4.8.so
+			=> sudo ln -s /usr/lib/x86_64-linux-gnu/libdb-5.1.so /usr/lib/libdb-4.so
+			: dbmmodule.c:25:23: fatal error: gdbm-ndbm.h: No such file or directory
+			=> install package gdbm				
+
+httpd-2.4.4		: 缺apr1.h
+			=> libapr1-dev (host 安裝)
+
+pcre-8.35		: enable-pcregrep-libbz2 because bzlib.h
+			=> bzip2 (安裝)
+
+iptables-1.4.12-1	: error
+			=> make clean (資料夾中下)
+
+zlib-1.2.7		: error: failed dependencies:
+				ld-linux.so.3(GLIBC_2.4)   is needed by zlib-1.2.7-1
+				libc.so.6(GLIBC_2.4)   is needed by zlib-1.2.7-1
+				libgcc_s.so.1(GCC_3.5)   is needed by zlib-1.2.7-1
+
+./ltib			: defined(@array) is deprecated
+				需要安裝ltib前,Host需要的pkgs.
+				sudo apt-get update
+				sudo apt-get install build-essential zlib1g-dev rpm libncurses5-dev m4 bison liblzo2-dev uuid-dev tcl
+
+csr-wifi-5.1.0-1	:
+			error: failed dependencies:
+				ld-linux.so.3(GLIBC_2.4)   is needed by csr-wifi-5.1.0-1
+				libc.so.6(GLIBC_2.15)   is needed by csr-wifi-5.1.0-1
+				libc.so.6(GLIBC_2.4)   is needed by csr-wifi-5.1.0-1
+				libgcc_s.so.1(GCC_3.5)   is needed by csr-wifi-5.1.0-1
+				libpthread.so.0(GLIBC_2.4)   is needed by csr-wifi-5.1.0-1
+				librt.so.1(GLIBC_2.4)   is needed by csr-wifi-5.1.0-1
+			=> .spec add Autoreqprov	: no
+
+busybox-1.20.2-1	: 
+			error: unknown type name 'rlim_t'
+			=> busybox-1.20.2/include/libbb.h
+				加入 #include <sys/resource.h>
+
+

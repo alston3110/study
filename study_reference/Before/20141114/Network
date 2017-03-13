@@ -1,0 +1,10 @@
+
+IPsec : 網際網路安全協定
+
+
+Openswan :  相關設定.
+		1. apt-get install openswan : 
+			=> X.509 certificate  -> dpkg-reconfigure openswan -> create -> Yes
+			=> ipsec_setup: Starting Openswan IPsec 2.6.37...
+
+

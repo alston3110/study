@@ -1,0 +1,385 @@
+=========================================基本設定 / 操作========================================================
+環境設定 : 	
+export ARCH=arm
+export CROSS_COMPILE=/opt/freescale/usr/local/gcc-4.6.2-glibc-2.13-linaro-multilib-2011.12/fsl-linaro-toolchain/bin/arm-none-linux-gnueabi-
+
+Ubuntu分享cmd:
+sudo mount -t vboxsf Share /home/retronix/work/Linux/Share
+
+uboot編譯步驟 ：	
+make distclean
+make mx6dl_sabresd_config(imx6 DualLite)(若make mx6q_sabresd_config, Dual/Quad)
+make
+
+kernel編譯步驟 ：
+make distclean
+make imx6_defconfig
+make uImage
+
+DD檔案 (IN):
+sudo dd if=u-boot.bin of=/dev/sdc bs=512 seek=2 skip=2(1K)
+sudo dd if=uImage of=/dev/sdc bs=512 seek=26624(13M)
+sudo dd if=/dev/zero of=/dev/sdc bs=512 seek=24576 count=10(12M)
+
+SDCARD Auto-Update :
+sudo dd if=extsmagic of=/dev/sdb  (0)
+sudo dd if=uImage-update of=/dev/sdb bs=512 seek=2048 (1M)
+sudo dd if=uramdisk-imx53.img of=/dev/sdb bs=512 seek=12288 (6M)
+
+DD資料 (OUT): 
+dd if=/dev/mmcblk0 of=ppp.txt bs=1024 skip=12288 count=10(12M)
+cat ppp.txt
+
+檔案partition/format :
+sudo mkfs.ext4 -L AMD /dev/sdc1	(Format DISK, 給名稱)
+sudo cp -avrf * /media/AMD	(複製所有資料到AMD去)
+sudo tar czf ../rootfs.tgz *	(壓縮所有資料到rootfs.tgz)
+sudo tar xzvf rootfs		(解壓縮）
+
+mount : 
+a. 	掛載 /proc : mount -n -t proc proc /proc
+	掛載 /sys  : mount -n -t sysfs sys /sys
+b. udev filesystem .. 
+
+partition: 單位 = 磁區 之於 1 * 512 = 512 位元組
+所用裝置 開機      開始         結束      區塊   識別號  系統
+/dev/sdc1           65536     7744511     3839488   83  Linux   <== 0x10000  (32M)
+
+========================================= / GIT / LTIB / PKGS 相關問題  =========================================
+★★★★GIT★★★★ 
+Download Source code :
+a. https://172.18.10.75/LinuxBSP	輸入: alstonlai/please
+b. 確定下載位置 : Example (LinuxBSP -> MX53_LinuxBSP.git -> Q7)
+c. git clone ssh://gitolite@172.18.10.75/LinuxBSP/MX53_LinuxBSP.git -b Q7
+
+
+GIT上傳 : (全部)
+git commit -a -m "freescale-imx6"
+切branch code (gitk) : Branch -> Visualize All Branches...
+	點到要切的那一隻Branch(右鍵）-> Reset master branch to here -> Hard:Reset working tree and index
+	(一般)
+	a. git fetch	下載最新的資訊
+	b. git status	觀察差異性
+	c. git checkout 調整成相同(.config 若需要先複製,下載完再回貼)
+	d. git pull	更新成最新的版本
+git相關訊息及流程 : 
+	git fetch -> 將Server資訊下載下來
+	git status -> Check 目前更改狀況
+	git checkout -- Path ->將有變動的地方還原..	(git reset --hard 若不行,就用此)
+	git pull -> 更新與server相同
+
+.gitignore : 記錄不被版本控制追蹤的檔案
+
+Add Patch : (Example  pcre-6.3)
+	a. pcre-6.3 （更改rpm/BUILD/pcre-6.3 -> pcre-6.3-new)
+	b. ./ltib -m prep -p pcre (建立原先的pcre-6.3 有問題的)
+	c. 使用Meld,比較兩個檔案. - 點選差異性(紅色部份)
+	d. 文件(F) -> Format as patch -> cp to 文件 -> 改名為example : pcre-6.3-fix-pp.patch -> 放於ㄣpkgs/中
+	e. 更改pcre-6.3.spec Add patch1 .. %patch1 -p1(原目錄下第幾層)
+	f. 修改 pcre-6.3-fix-pp.patch
+		--- (/home/retronix/work/linux/ppp/mx6_linuxBSP/rpm/BUILD/ 刪除)pcre-6.3/configure
+		+++ (/home/retronix/work/linux/ppp/mx6_linuxBSP/rpm/BUILD/ 刪除)pcre-6.3-new/configure
+
+★★★★LTIB★★★★ 
+ltib 重新Build,不變Config :
+	a. sudo rm -rf rootfs
+	b. rpm/RPMS/ 全砍掉
+
+ltib PKGS 載入順序 :
+config/userspace/pkg_map
+config/platform/imx/pkg_map
+
+ltib config執行順序 : .config -> imx5_defconfig.dev -> defconfig.dev
+.config : 目前所使用的config
+imx5_defconfig.dev : 是執行ltib時,在make前copy .config而成
+defconfig.dev : 若沒有.config / imx5_defconfig.dev, 則執行此config
+
+LTIB使用:
+./ltib -m prep -p rtx_setenv	(解pkgs)
+./ltib -m shell 		(進LTIB shell裏)
+	LTIB> cd rpm/Build/rtx_setenv-0.01/
+	LTIB> make clean
+	LTIB> make
+或	LTIB> cc uart_server.c -o uart_server
+
+LTIB : 套件管理程式(Synaptic)(os密碼:retronix)
+透過 - sudo apt-get install php* (查詢相關套件) (Y/N) N
+透過 - sudo apt-get source ZIP (下載相關套件 : ZIP)(下載 : a.Zip-3.0資料夾, b.Zip_3.0.orig.tar.gz, c.Zip_3.0-4.debian.tar.gz, d.Zip_3.0-4.dsc)
+壓縮 Zip-3.0 => Zip-3.0.tar.gz
+將Zip-3.0.tar.gz丟到pkgs,更改spec.
+
+Add PKGS :
+a. Google : pkgs - xfce4-4.8.0.3.tgz.gz => pkgs folder
+b. Add dist/lfs-5.1/xfce4 folder
+c. cp template.spec => dist/lfs-5.1/xfce4/xfce4_4.8.0.3.spec
+d. change spec => Name / Version / Source
+e. config/userspace/pkg_map => PKG_XFCE4 = xfce4_4.8.0.3
+f. config/userspace/packages.lkc => config PKG_XFCE4
+
+xorg.conf/ version/ mcu_version 參數修改置放在ltib : 
+MX53_LinuxBSP/config/platform/imx/merge/etc/X11
+MX53_LinuxBSP/config/platform/imx/merge/etc/
+
+★★★★PKGS★★★★ 
+ncurses-5.9 	: Add	--without-ada
+			置換 ncurses-5.9.spec
+			砍掉 ncurses-5.9 folder, rebuild
+			install : /usr/share/tabset , /usr/share/terminfo
+			downgraded --> ncurses-5.3
+
+alsa-utils-1.0.24.2 : symbol lookup error: alsamixer: undefined symbol: set_escdelay 
+			downgraded alsa-utils
+
+dbus-1		: 	version	>=1.4	
+			PKG_DBUS=dbus-1.6.4
+
+usbutils	:	usbutils.spec -> BuildRequires   : libusb0 <--更改
+
+glib2-2.32.4	:	Add	glib2-2.32.4.spec	(set var length)
+			ac_cv_alignof_guint32=4 \
+			ac_cv_alignof_guint64=8 \
+			ac_cv_alignof_unsigned_long=4 \
+
+libxcb-1.9	：	Failed to load the xcbgen Python package!
+			apt-get install python-xcbgen
+
+libXtst-1.2.0	：	error: package libXtst is not relocateable
+			libXtst-1.2.0.spec  ==>  增加 Prefix          : %{pfx}
+
+wayland-1.0.3	:	wayland-private.h:28:17: fatal error: ffi.h: No such file or directory
+			libffi-3.0.13.spec  ==>  加入 (搬動include資料夾,到對的位置)
+			mkdir -p $RPM_BUILD_ROOT/%{pfx}/usr/include
+			mv $RPM_BUILD_ROOT/%{pfx}/usr/lib/libffi-3.0.13/include/* $RPM_BUILD_ROOT/%{pfx}/usr/include/.
+			rm -rf $RPM_BUILD_ROOT/%{pfx}/usr/lib/libffi-3.0.13
+
+glibc-2.13	:	No rule to make target `...rpm/BUILD/glibc-2.13/build-arm/Versions.all'
+			Synaptic 套件管理程式 : 安裝 gawk
+
+gtk+-2.20.0	:
+			io-png.c: In function 'png_simple_error_callback':
+			io-png.c:187:30: error: dereferencing pointer to incomplete type
+			io-png.c: In function 'gdk_pixbuf__png_image_load':
+			io-png.c:291:6: error: dereferencing pointer to incomplete type
+				=> gtk 2.24.20
+			decompose-bits.c:21:35: fatal error: gdk-pixbuf/gdk-pixbuf.h: No such file or directory
+				=>gdk-pixbuf-2.28.2
+			gtkpango.c:199:17: error: 'PangoRendererClass' has no member named 'draw_glyph_item'
+				=> pango 1.34.1
+			pangofc-fontmap.c:1378:12: error: 'FC_WEIGHT_EXTRABLACK' undeclared
+				=>freetype 2.5.0.1
+			pango-ot-private.h:28:19: fatal error: hb-ot.h: No such file or directory
+				=>harfbuzz-0.9.18
+
+xfce-utils-4.8.0 :
+			libtool: link: cannot find the library `/usr/lib/libstartup-notification-1.la' or unhandled argument 
+						`/usr/lib/libstartup-notification-1.la'
+			spec 增加=> find $RPM_BUILD_ROOT/%{pfx}/%{_prefix}/lib/ -name "*.la" | xargs rm -f
+			將 .la file 砍掉
+thunar-1.2.0	:
+			thunar-sbr-replace-renamer.c:192:20: error: 'PCRE_CONFIG_UTF8' undeclared (first use in this function
+
+
+========================================= / uboot / kernel / rootfs 系統問題  =========================================
+★★★★uboot★★★★ 
+橋接 : 	
+	a. MX6_LinuxBSP/config/platform/imx/main.lk (./ltib -m config) ==>  config BOARD_MX6DL_Q7
+	b. MX6_LinuxBSP/dist/lfs-5.1/u-boot/u-boot-common.tmpl (.spec) ==>  PKG_U_BOOT_CONFIG_TYPE = mx6dl_q7_config
+	c. MX6_LinuxBSP/u-boot/Makefile ==> board/freescale/mx6q_q7/config.tmp
+	d. MX6_LinuxBSP/u-boot/include/configs/mx6dl_q7.h
+	e. MX6_LinuxBSP/u-boot/board/freescale/mx6q_q7 (folder)
+	f. MX6_LinuxBSP/u-boot/board/freescale/mx6q_q7/u-boot.lds (need modify)
+	g. MX6_LinuxBSP/u-boot/include/asm-arm/mach-types.h (#define MACH_TYPE_MX6Q_Q7	4480)
+	h. MX6_LinuxBSP/u-boot/board/freescale/mx6q_q7/mx6q_q7.c (gd->bd->bi_arch_number = MACH_TYPE_MX6Q_Q7) ==> kernel
+											   MACH_TYPE_MX6Q_SABRESD	
+
+console output :	(Example : UART2)
+	a. mx6q_sabresd.h	#define CONFIG_UART_BASE_ADDR	UART2_BASE_ADDR
+	b. mx6q_sabresd.c	setup_uart(){	mxc_iomux_v3_setup_pad(MX6Q_PAD_EIM_D26__UART2_TXD)
+						mxc_iomux_v3_setup_pad(MX6Q_PAD_EIM_D27__UART2_RXD)	}
+	c. mx6q_sabresd.h	#define	CONFIG_EXTRA_ENV_SETTINGS ... console=ttymxc1 ..
+
+usb verify :
+	a. 插入fat格式的隨身碟
+	b. usb start	-> usb scan
+	c. usb dev	-> 可見到隨身碟
+	d. fatls usb 0	-> list usb data (usb 1)
+	e. fatload usb 0 ${loadaddr} xxx	-> 將xxx檔載入
+	f. md ${loadaddr}			-> 載入資料看
+
+board for kernel : mx6q-q7
+	a. include/config/mx6q_q7.h
+	b. board/freescale/mx6q_q7 資料夾
+	c. board/freescale/mx6q_q7/mx6q_q7.c
+	d. mx6q_q7.c -> MACH_TYPE_MX6Q_SABRESD
+	e. include/asm-arm/mach-types.h:3260: #define MACH_TYPE_MX6Q_SABRESD	       3980
+★★★★kernel★★★★ 
+橋接:
+	a. MX6_LinuxBSP/kernel_imx/arch/arm/mach-mx6/board-mx6q_q7.c
+	   MX6_LinuxBSP/kernel_imx/arch/arm/mach-mx6/board-mx6q_q7.h
+	   MX6_LinuxBSP/kernel_imx/arch/arm/mach-mx6/mx6q_q7_pmic_pfuze100.c
+	b. MX6_LinuxBSP/kernel_imx/arch/arm/mach-mx6/Kconfig (Kernel Configuration -> System Type -> 
+			Freescale MXC Implementations -> Supporti.MX 6Quad platform -> Q7 platform)
+	c. MX6_LinuxBSP/kernel_imx/arch/arm/mach-mx6/Makefile (CONFIG_MACH_MX6Q_Q7) (need modify)
+	d. MX6_LinuxBSP/kernel_imx/arch/arm/tools/mach-types (mx6q_q7	MACH_MX6Q_Q7	MX6Q_Q7	  3980)
+	e. MX6_LinuxBSP/kernel_imx/sound/soc/imx/Kconfig (config SND_SOC_IMX_SGTL5000 ..) (Driver有用到Machine-Type)
+	   MX6_LinuxBSP/kernel_imx/sound/soc/imx/imx-sgtl5000.c (machine_is_mx6q_q7())
+
+console output :	(Example : UART2)
+	a. board-mx6q_sabresd.c	--- mx6_sabresd_timerinit(){	..	UART2	..}
+	b. board-mx6q_sabresd.h
+
+★★★★rootfs★★★★ 
+system issue : 		(cp: write error: No space left on device)
+	a. df -h (可以見到空間不足訊息) : rwfs 512.0K(Size) 512.0K(Used) 0(Available) 100%(Use%)
+	b. 更改 /etc/rc.d/rc.conf : export TMPFS_SIZE="512k" -> "128m"(更改512K -> 128M)
+	c. df -h : rwfs 128.0M(Size) 3.7M(Used)  124.3M(Available) 3%(Use%) (空間充足)
+
+
+========================================= / Debug / Info / Environment 相關問題  =========================================
+★★★★Debug★★★★ 
+Debug Print相關輸出 : 
+printk("%s(%d)\n",__FILE__,__LINE__);	(列印Debug Message)
+printk("%s(%d) : cmd=%d, value=%d\n",__FILE__,__LINE__,cmd,value);
+
+Net連線 :
+ifconfig eth0 up (UP PHY HW)
+udhcpc -i eth0 (Get IP)
+ifconfig
+
+WIFI連線 : 
+ifconfig wlan0 up
+iwconfig
+iwlist scan
+
+Audio :
+播放檔案 aplay -D plughw:0,0 /unit_tests/audio8k16S.wav -v (plughw : card number, device number)
+錄音存檔 arecord -t wav -f cd -d 10 ./audio.wav (錄10 sec)
+更改設定 amixer set "function" 狀態 (example : amixer set 'Jack Function' on)
+
+Vedio : 調整color
+export TERM=linux
+echo -n 32 > /sys/class/graphics/fb0/bits_per_pixel
+setterm -inversescreen on > /dev/tty0
+setterm -foreground green > /dev/tty0
+setterm -clear all > /dev/tty0
+
+★★★★Environment★★★★ 
+MFG_TOOL : 	wrapping_machine(imx6)
+	a. HID-compliant device, 硬體識別碼 : HID\VID-51A2 & PID_0061
+	b. profiles/MX6Q Linux Update/OS Firmware/ucl2 : 原DL為 51A2:54(更改為vid=51A2 pid=0061)
+	c. uboot(mfg uboot code for DualLite) 才能跑得動, 或從官網直接下載Dual-Lite MFG 最快!!
+
+autologin : 自動登入
+	a. /etc/inittab -> (::respawn:/etc/rc.d/rc_mxc.S)
+	b. rc_mxc.S -> (/sbin/getty -n -l /sbin/autologin -L ttymxc3 115200 vt100)
+	c. /sbin/autologin -> (chmod +x autologin)
+			#!/bin/sh
+			/bin/login -f root
+
+/root/.profile : 個人設定 - 所要執行的程式.
+
+console UART1 test:
+	main.sh | tee /dev/ttymxc0
+
+UART port Baud Rate設定 : 
+stty -F /dev/ttymxc4 115200 (設定baudrate速率=115200)
+stty -F /dev/ttymxc4 -echo (關閉回顯)
+stty -F /dev/ttymxc4 raw (設置原始输入
+
+搜(Sagasu) :
+Editor command - gedit +%n %f	使用gedit編輯.
+
+ln [-sf] 來源檔 目標檔
+ln -s passwd passwd-so
+passwd 為要指定之路徑資料夾，passwd-so 為產生出來之link名稱
+
+★★★★Info★★★★ 
+video :
+cat /sys/class/graphics/fb0/mode  ===> S:1280x720p-60 (目前resolution)
+cat /sys/class/graphics/fb0/modes ===> ...(所有support resolution)
+echo S:1280x720p-50 > /sys/class/graphics/fb0/mode (切換)
+
+I2C debug:
+i2cdetect -y -r 0 (detect i2c bus0 devices)
+i2cdump -y -f 0 ox1c (dump i2c bus0 device addr = 0x1C 所有register的值)
+i2cget -y -f 0 0x1c 0x02 (get i2c bus0 devices addr=0x1c register=0x02 的值
+
+GPIO button: (Keyboard button)
+cat /dev/input/by-path/platform-gpio-keys-event- (IMX6-Q7)
+
+mcu_version
+cat /sys/devices/platform/mcu_efm.0/mcu_version
+
+lsusb : list usb device
+
+pci : wireless driver(intel)
+/sys/bus/pci/drivers/iwlagn
+
+Debug Print相關輸出 : 
+printk("%s(%d)\n",__FILE__,__LINE__);	(列印Debug Message)
+printk("%s(%d) : cmd=%d, value=%d\n",__FILE__,__LINE__,cmd,value);
+
+尋找資料 : 
+grep -r "cpu is" arch/
+
+cat /proc/cmdline	cat cmdline參數
+
+touchscreen :
+cat /dev/input/event1	(抓touch panel的info)
+cat /sys/class/input/input1/name  (device = max11801_ts)
+
+X11 :
+cat /usr/var/log/Xorg.0.log
+
+SATA info :
+cat /sys/devices/platform/ahci.0/host0/target0\:0\:0/0\:0\:0\:0/block/sda/sda1/size
+=========================================Compile 教學========================================================
+Compile順序 :
+	CxxFLAGS	CFLAGS	ASFLAGS	LDFLAGS
+cpp -> 	g++ (c++) -> 	cc -> 	as -> 	ld ->
+	.cpp		.c	.s	.o	.bin
+	前置處理器
+
+Compile Flag :
+	$(CC)	$(CFLAGS)
+-I	-L	-D		給compile使用
+
+Example : 
+	LIBS = png curse
+	for(lib in $LIBS)
+	LDFLAGS += -l$(lib)
+
+Linking Example :
+	main(int argc , char *argv)
+		argv[0] ?
+		if(argv[0] = "ls")
+		{	ls()----	}
+		argv[1] ..
+
+Example :
+1.c	ASM("segment  ABC")
+	123..
+	ASM("segment .text")
+
+2.c	ASM("segment  ABC")
+	456..
+	ASM("segment .text")
+
+結果 :
+ 	把同段C 放一起	=> 	123
+				456
+
+Code Example : 
+	asm("cpuid" : "=a" (max_level), "=b" (ebx), "=c" (ecx),
+		"=d" (edx) : "a" (0));
+	if (ebx != 0x756e6547 || edx != 0x49656e69 || ecx != 0x6c65746e) {
+		if (verbose)
+			fprintf(stderr, "%.4s%.4s%.4s != GenuineIntel",
+				(char *)&ebx, (char *)&edx, (char *)&ecx);
+		exit(1);
+	}
+	asm("cpuid" : "=a" (fms), "=c" (ecx), "=d" (edx) : "a" (1) : "ebx");
+
+.la 相依性/安裝路徑 (gcc會先找 .la -> .so(dynamic), .a(ststic))
+
+

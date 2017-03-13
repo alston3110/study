@@ -1,0 +1,101 @@
+
+Command : 
+	echo "RPM_BUILD_ROOT = $RPM_BUILD_ROOT" (透過echo獲得參數值)
+變數 : 
+	%{XXX}	: XXX 變數
+	$OOO	: OOO 變數
+
+Parameter : 
+	hostname	= retronix-VirtualBox
+	top		= /home/retronix/work/Linux/BISHOP/ltib_BISHOP		(ltib)
+	bdir		= /opt/freescale
+
+
+
+	RPM_BUILD_DIR 	= /home/retronix/work/Linux/BISHOP/ltib_BISHOP/rpm/BUILD  (指到rpm裡的build)
+	RPM_BUILD_ROOT 	= /home/retronix/work/Linux/BISHOP/ltib_BISHOP/tmp/csr-wifi (指到本身pkgs檔案)
+	_target_cpu	= arm
+	pfx		= /opt/freescale/rootfs/arm
+	_tmppath	= /home/retronix/work/Linux/BISHOP/ltib_BISHOP/tmp (ltib 下的 tmp path)
+	name		= csr-wifi (pkgs name)
+	summary 	= Linux Wireless csr_wifi driver (?敘述吧)
+	TOOLCHAIN_PATH	= /opt/freescale/usr/local/gcc-4.4.4-glibc-2.11.1-multilib-1.0/arm-fsl-linux-gnueabi
+	TOOLCHAIN_PREFIX = arm-none-linux-gnueabi-
+	SPOOF_PATH	= /home/retronix/work/Linux/BISHOP/ltib_BISHOP/bin:/opt/freescale/ltib/usr/spoof:/home/retronix/work/Linux/BISHOP/ltib_BISHOP/bin:/opt/freescale/ltib/usr/bin:/opt/freescale/usr/local/gcc-4.4.4-glibc-2.11.1-multilib-1.0/arm-fsl-linux-gnueabi/bin:/usr/local/bin:/usr/bin:/bin:/usr/bin/X11:/usr/X11R6/bin	((指的是rootfs端 ..)
+
+	UNSPOOF_PATH	= /home/retronix/work/Linux/BISHOP/ltib_BISHOP/bin:/opt/freescale/ltib/usr/bin:/opt/freescale/usr/local/gcc-4.4.4-glibc-2.11.1-multilib-1.0/arm-fsl-linux-gnueabi/bin:/usr/local/bin:/usr/bin:/bin:/usr/bin/X11:/usr/X11R6/bin (指的是HOST端 ..)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+configure
+========================================================================================
+echo ""
+echo "============================================"
+echo "ac_clean_files_save = $ac_clean_files_save"
+echo "ac_clean_files = $ac_clean_files"
+echo "ac_files = $ac_files"
+echo "ac_link = $ac_link"
+echo "ac_link_default = $ac_link_default"
+echo "as_echo = $as_echo"
+echo "as_me = $as_me"
+echo "LINENO = $LINENO"
+echo "as_lineno-$LINENO = ${as_lineno-$LINENO}"
+echo ""
+echo "ac_exeext = $ac_exeext"
+echo "CFLAGS = $CFLAGS"
+echo "CPPFLAGS = $CPPFLAGS"
+echo "LDFLAGS = $LDFLAGS"
+echo "ac_ext = $ac_ext"
+echo "LIBS = $LIBS"
+echo ""
+echo "CC = $CC"
+echo "LDFLAGS = $LDFLAGS"
+echo "ac_ext = $ac_ext"
+echo "conftest.$ac_ext"
+echo ""
+echo "============================================"
+============================================
+ac_clean_files_save = 
+ac_clean_files =  a.out a.out.dSYM a.exe b.out
+ac_files = conftest a.exe a_out.exe b.out conftest.*
+ac_link = $CC -o conftest$ac_exeext $CFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ext $LIBS >&5
+ac_link_default = $CC $CFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ext $LIBS >&5
+as_echo = printf %s\n
+as_me = configure
+LINENO = 3406
+as_lineno-3407 = 3407
+
+ac_exeext = 
+CFLAGS = -I/home/rtx-3110/Work/Project/Linux/BISHOP/bishop-ltib/rootfs/usr/src/linux/include
+CPPFLAGS = 
+LDFLAGS = 
+ac_ext = c
+LIBS = -lncurses
+
+CC = gcc
+LDFLAGS = 
+ac_ext = c
+conftest.c
+
+============================================
+

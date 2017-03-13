@@ -1,0 +1,154 @@
+20151105
+	RETRONIX 專案一覽表 :	Alston
+		a) Kernel 3.14.28 for Q7	(OK)
+		b) Air-Plane(SI-12)		(OK)
+		c) PICO ITX			(GO)
+		e) Q7 New PCBA Test		(GO)
+
+20151030
+	BI-Shop
+		a) lower power
+		b) BT
+		c) 3G module firmware update
+	BI-Shop2
+		a) SOC study
+	Air-plane 重慶機場 (研二所)
+		a) BSP 技術文件 
+		b) BSP Image
+		c) update system
+			ssh
+			telnet
+			/etc/resolv.conf
+			service 開關
+			/etc/init/tty*.conf
+			/etc/X11/xorg.conf	- disable change VT (調整 ....
+						- disable ctrl+c (Xorg)
+						- power save (xset - s off)
+			install ubuntu-server
+				base_file sysc tem
+				-Xorg (libx11, plug X11, xorg <- X11 server)
+					-Xset
+					-Xroot
+				(-mesa /vviaid   for game)
+				/etc/inittab
+					/etc/init/tty1.cont
+					exec /bin/getty  XX user
+					/home/.RTx/.profile
+					start X
+					.xinitrc
+					mgetty
+						- xterm
+						- mp-tools
+				
+	SMTT
+		a) 111+ Mp-tools
+		b) VIU500 - wifi+BT
+		c) VIU500 - Android
+	AcSip
+		a) Player 相關
+		b) Editor
+	RayMark
+		a) 加密狗
+		b) player 2.3.7	-> 4.2.x
+		c) ftp
+		d) ppt
+		e) VoIp	-	A6 (X)
+				Atom PCB
+				- server
+				- Android
+
+	LineO
+		a) Q7 kernel 3.14.28
+				sgtl5000 _ 耳機 plugin IRQ
+				Mic-in Recorder
+				wifi module
+	MCU geteway
+		a) mbed
+
+20151023
+	python 語言介紹.
+20151016
+		ALF	
+			- Bishop
+				. Low power (report)
+				.BT 
+			- Bishop2  (SOC IC)
+			
+		AcSip
+			- editor (.新 .大 .泛 )
+			- 泛用型
+			- 八達通
+		SMTT
+			- Volar 111 +	MP_Tool
+			- VU500(Volar114)
+				. AcSip module
+				. Android 4.4.x
+		RoyMark
+			- Rlu-player 優化
+			- Rlu-player (Linux version)
+				. flash
+				. widege
+				. ppt
+
+
+20150605
+		Volar112 - 充電 分析				(-)	
+		EFM32	 - tool Update / 			(O)
+			 - update issue (0x0-0x7ff)		(-)
+		Wrapping - prepare Realibility 			(O)
+			 - 10000次 - UART 影響			(X)
+
+20150529
+		Volar112 - Battery Charger 充電緩慢.
+				register initial		(O)
+		Wrapping - MP30
+			 - autoupdate/ mfg/ server update	
+			 - run in (燒機 3 hours)		(O)
+			 - Mp test				(O)
+			 - Hardwd				
+			 - 10000次				(O)
+			 - Realibility(高低開,高低運作)		(X)
+		Q7	 - RMA (重新MFG) OK			(O)
+
+20150522-
+		Volar112 - POWER Sequence
+		Wrapping - 板子快回來,prepare	
+			 - release MFG - MP/RUNIN/Emmc
+
+20150515- 	Volar112 - Audio noise issue			(O)
+			 - PowerGD signal			(X)
+			 - SD/EMMC access LED			(X)
+		Wrapping - NewEmmc - kernel / MFG update	(O)
+			 - RUN_IN/MP SD				(X)
+		EFM32	 - Firmware protocol 			(O)
+			 - Firmware update			(X)
+			 - Linux Fimeware compile		(X)
+			 - function 擴展			(X)
+		Q7 (Demo board) - New Panel(600 x 800)		(O)
+
+開發EFM32 Firmware for Volar112
+
+-------------------------------------------------------------------------------------
+20150213 - EFM-MCU program - battery charge/ gpio control/ ADC convert
+		評估microchip至換成efm32的可能性.
+20150206 - update Kernel/linux-imx-3.10.x.git : imx6q-q7 
+		update Yocto/meta-rtx-arm.git : uboot-rtx_2014.09, linux-rtx_3.10.17
+20150130 - YOCTO structure, 熟悉YOCTO , config
+20150123 - YOCTO - VPU (搬到 Uboot2014 + kernel 3.10.17 + Ubuntu 14.04) Fail
+20150116 - YOCTO - GPU (搬到 Uboot2014 + kernel 3.10.17 + Ubuntu 14.04) Work
+20150112 - Build imx6q-Q7 ubuntu system - vpu / gpu (hard floating)
+20150104 - Q7-module-board 高溫問題(Stress test, DDR parameter)
+20141229 - 
+20141222 - Volar112 (Battery Driver - LED Control porting)
+20141215 - Wrapping_Machine (RMA - mini SD card issue)
+20141208 - Wrapping_Machine (RMA - SGL5000 noise/ gone)
+
+20141201 - (kernel update to 3.10.17) 
+		boundary file-system
+		ubuntu
+20141124 - BISHOP - gateWay (kernel update to 3.10.31)
+		- ubuntu
+		驗證 wireless, Bluetooth, internet, each port
+
+
+

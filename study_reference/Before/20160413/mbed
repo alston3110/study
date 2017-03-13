@@ -1,0 +1,105 @@
+
+mbed SDK: 
+	build		: build folder
+	dist		: mbed_tool
+	docs		: 說明文件
+	libraries 	: 
+	mbed_tools.egg-info :
+	setuptools-14.3 :
+	travis		:
+	workspace_tools :
+	
+
+
+操作程序 :
+1. mbed/docs/BUILDING.md
+	. Installed [Python 2.7]
+	. Installed [setuptools]
+	. Optionally you can install [pip]
+	. python setup.py install  --  ImportError: No module named setuptools
+		synaptic : install python-colorama
+				   --  ImportError: No module named setuptools
+		下載setuptools-14.3.tar.gz 解開
+			sudo python ez_setup.py (安裝setuptools)
+	. sudo 	python setup.py install (安裝完成)
+		多了 - build/ dist/ mbed_tools.egg-info/
+	. workspace_tools/ private_settings.py 
+		- 設定build相關訊息.
+
+2. cd workspace_tools : rm private_settings.py, touch private_settings.py
+		sudo apt-get install gcc-arm-none-eabi=4.9.3.2015q1-0trusty13 (install gcc-arm-none-eabi 4.9)
+		sudo apt-get install python-setuptools python-prettytable python-serial python-colorama python-jinja2
+		python build.py -help  (help)
+		python build.py -S (list 相關訊息) 
+		python build.py -m K64F -t GCC_ARM		(k64F : SDK board lib)
+		python build.py -m EFM32LG_STK3600 -t GCC_ARM	(EFM32LG_STK3600 : SDK board lib)
+
+		python make.py -m K64F -t GCC_ARM -n MBED_A1
+		python make.py -m EFM32LG_STK3600 -t GCC_ARM -n MBED_A1
+
+3. 
+	python build.py -r -e -m K64F -t GCC_ARM  (build rtos, eth, mcu=K64F, GCC_ARM)
+
+	--> build 出 rtos, eth, mbed 資料夾.
+
+	python make.py --eth --rtos -m K64F -t GCC_ARM -n MBED_A1
+
+	--> compile 出	(../libraries/test/mbed/basic/main.c)
+
+	python project.py -m K64F -n MBED_A3 -i gcc_arm
+
+
+====================================================================================================
+STM32F103RBT6 64 PINS
+1. python build.py -r -U -m NUCLEO_F103RB -t GCC_ARM	(-e -u XXX)
+
+2. python make.py --usb_host --rtos -m NUCLEO_F103RB -t GCC_ARM -n MBED_A3
+
+3. python project.py -m NUCLEO_F103RB -n MBED_A3 -i gcc_arm
+
+=>
+3. workspace_tool/tests.py : 加入 Program 132 (MBED_RTX)
+    {
+        "id": "MBED_RTX", "description": "NUCLEO_F103RB",
+        "source_dir": join(TEST_DIR, "rtos", "mbed", "basic"),
+        "dependencies": [MBED_LIBRARIES, RTOS_LIBRARIES, TEST_MBED_LIB],
+        "automated": True,
+    },
+
+4. python project.py -m NUCLEO_F103RB -n MBED_RTX -i gcc_arm
+
+5. targets.py 會指定相關SDK目錄位置 (若要加一個target SDK, target class name 要對應)
+	指示 	mbed/targets/cmsis...
+		mbed/targets/hal...
+	若 mbed/targets/hal/TARGET_STM/TARGET_STM32F1/serial_api.c (要更改 baud=115200)
+		obj->baudrate = 115200;
+
+6. tests.py 指定(make -n XXX, 相關SDK name, 相關位置 tests)
+
+7. main.c 範例 : mbed/libraries/tests/mbed/..  pwm/rtc/..
+	1. PWM	OK
+	2. RTC	OK
+	3. GPIO	OK
+	4. I2C 	NO
+	5. RTOS thread
+
+8. UART output setting
+	Serial uart2(PA_2, PA_3);	設定UART2
+	Serial uart3(PC_10, PC_11);	設定UART3
+	uart2.baud(115200);		設定UART2 Baud rate 115200
+	uart2.attach(&echouart2,SerialBase::RxIrq);	設定rx interrupt
+	RX接收到interrupt後. 存入buf2
+		buf2[iConsoleLoop] = uart2.getc();	
+		uart2.putc(buf2[iConsoleLoop]);		//輸出到uart2 TX 到 console(panel)
+9. BLUETOOTH (HC-05)
+	Key Pin: 接到 VCC 進入 AT mode.
+		設定BLUETOOTH相關資料 
+	Key Pin: Floating. (role = slave)
+		PC bluetooth 連接到 hc-05 (開啟com port) 可連接溝通. 互丟資料
+
+10. 傳送UART pass to Bluetooth
+	buf2[iConsoleLoop] -> at command 後加 \r\n
+	at comamnd OK!!
+
+
+=================================================================================================

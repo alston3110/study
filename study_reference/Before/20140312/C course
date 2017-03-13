@@ -1,0 +1,80 @@
+
+=========================================Compile 教學========================================================
+Compile順序 :
+	CxxFLAGS	CFLAGS	ASFLAGS	LDFLAGS
+cpp -> 	g++ (c++) -> 	cc -> 	as -> 	ld ->
+	.cpp		.c	.s	.o	.bin
+	前置處理器
+
+Compile Flag :
+	$(CC)	$(CFLAGS)
+-I	-L	-D		給compile使用
+
+Example : 
+	LIBS = png curse
+	for(lib in $LIBS)
+	LDFLAGS += -l$(lib)
+
+Linking Example :
+	main(int argc , char *argv)
+		argv[0] ?
+		if(argv[0] = "ls")
+		{	ls()----	}
+		argv[1] ..
+
+Example :
+1.c	ASM("segment  ABC")
+	123..
+	ASM("segment .text")
+
+2.c	ASM("segment  ABC")
+	456..
+	ASM("segment .text")
+
+結果 :
+ 	把同段C 放一起	=> 	123
+				456
+
+Code Example : 
+	asm("cpuid" : "=a" (max_level), "=b" (ebx), "=c" (ecx),
+		"=d" (edx) : "a" (0));
+	if (ebx != 0x756e6547 || edx != 0x49656e69 || ecx != 0x6c65746e) {
+		if (verbose)
+			fprintf(stderr, "%.4s%.4s%.4s != GenuineIntel",
+				(char *)&ebx, (char *)&edx, (char *)&ecx);
+		exit(1);
+	}
+	asm("cpuid" : "=a" (fms), "=c" (ecx), "=d" (edx) : "a" (1) : "ebx");
+
+.la 相依性/安裝路徑 (gcc會先找 .la -> .so(dynamic), .a(ststic))
+
+===============================================define==================================================
+char
+int
+long
+void
+unsigned
+---------------------------
+typedef struct [name]
+{
+} <define name> ;
+
+struct <name> {
+} [實體宣告 name];
+---------------------------
+<define name> stcA;
+struct [name] stcA;
+---------------------------
+struct <name> {
+};
+struct <name> [實體宣告 name];
+
+volatile 避免最佳化的法則.
+register int a; 使用MCU register Access
+
+==========================Driver=============================
+__init , __exit
+probe 
+-> func_ops, file_ops (open-device -> file_operations)
+-> ioctl
+struct platform_driver

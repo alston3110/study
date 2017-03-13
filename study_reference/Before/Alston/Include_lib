@@ -1,0 +1,20 @@
+
+Boundary Device :
+	GPU : 
+	1. libVIVANTE.so
+		/usr/lib/arm-linux-gnueabihf/vivante/libVIVANTE.so
+		/usr/lib/arm-linux-gnueabihf/vivante/x11/libVIVANTE.so
+	2. libGAL.so
+		/usr/lib/arm-linux-gnueabihf/vivante/libGAL.so
+		/usr/lib/arm-linux-gnueabihf/vivante/x11/libGAL.so
+	3. libEGL.so
+		/usr/lib/arm-linux-gnueabihf/vivante/libEGL.so
+	4. libEGL.so.1
+		/usr/lib/arm-linux-gnueabihf/vivante/libEGL.so.1
+		/usr/lib/arm-linux-gnueabihf/vivante/x11/libEGL.so.1
+		/usr/lib/arm-linux-gnueabihf/mesa-egl/libEGL.so.1
+
+	VPU
+
+
+

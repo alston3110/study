@@ -1,0 +1,1267 @@
+★★★★PKGS★★★★ 
+ncurses-5.9 	: Add	--without-ada
+			置換 ncurses-5.9.spec
+			砍掉 ncurses-5.9 folder, rebuild
+			install : /usr/share/tabset , /usr/share/terminfo
+			downgraded --> ncurses-5.3
+
+		: ./generate: error while loading shared libraries: libc.so.6: cannot open shared object file: No such file or directory
+			換其他已經build完成的spec來置換.
+
+
+
+alsa-utils-1.0.24.2 : symbol lookup error: alsamixer: undefined symbol: set_escdelay 
+			downgraded alsa-utils
+alsa-utils-1.0.27.2 : /bin/bash: xmlto: command not found
+			=> xmlto(Synaptic install)
+
+dbus-1		: 	version	>=1.4	
+			PKG_DBUS=dbus-1.6.4
+
+usbutils	:	usbutils.spec -> BuildRequires   : libusb0 <--更改
+
+glib2-2.32.4	:	Add	glib2-2.32.4.spec	(set var length)
+			ac_cv_alignof_guint32=x4 \
+			ac_cv_alignof_guint64=8 \
+			ac_cv_alignof_unsigned_long=4 \
+
+libxcb-1.9	：	Failed to load the xcbgen Python package!
+			apt-get install python-xcbgen
+
+libXtst-1.2.0	：	error: package libXtst is not relocateable
+			libXtst-1.2.0.spec  ==>  增加 Prefix          : %{pfx}
+
+wayland-1.0.3	:	wayland-private.h:28:17: fatal error: ffi.h: No such file or directory
+			libffi-3.0.13.spec  ==>  加入 (搬動include資料夾,到對的位置)
+			mkdir -p $RPM_BUILD_ROOT/%{pfx}/usr/include
+			mv $RPM_BUILD_ROOT/%{pfx}/usr/lib/libffi-3.0.13/include/* $RPM_BUILD_ROOT/%{pfx}/usr/include/.
+			rm -rf $RPM_BUILD_ROOT/%{pfx}/usr/lib/libffi-3.0.13
+
+glibc-2.13	:	No rule to make target `...rpm/BUILD/glibc-2.13/build-arm/Versions.all'
+			Synaptic 套件管理程式 : 安裝 gawk
+
+gtk+-2.20.0	:
+			io-png.c: In function 'png_simple_error_callback':
+			io-png.c:187:30: error: dereferencing pointer to incomplete type
+			io-png.c: In function 'gdk_pixbuf__png_image_load':
+			io-png.c:291:6: error: dereferencing pointer to incomplete type
+				=> gtk 2.24.20
+			decompose-bits.c:21:35: fatal error: gdk-pixbuf/gdk-pixbuf.h: No such file or directory
+				=>gdk-pixbuf-2.28.2
+			gtkpango.c:199:17: error: 'PangoRendererClass' has no member named 'draw_glyph_item'
+				=> pango 1.34.1
+			pangofc-fontmap.c:1378:12: error: 'FC_WEIGHT_EXTRABLACK' undeclared
+				=>freetype 2.5.0.1
+			pango-ot-private.h:28:19: fatal error: hb-ot.h: No such file or directory
+				=>harfbuzz-0.9.18.........................................................未完!!
+
+xfce-utils-4.8.0 :
+			libtool: link: cannot find the library `/usr/lib/libstartup-notification-1.la' or unhandled argument 
+						`/usr/lib/libstartup-notification-1.la'
+			spec 增加=> find $RPM_BUILD_ROOT/%{pfx}/%{_prefix}/lib/ -name "*.la" | xargs rm -f
+			將 .la file 砍掉
+
+libxfce4util-4.8.1 : checking whether putenv() implementation is broken... configure: error: 
+			-> 更改configure檔
+
+xfce4-session-4.8.0 : libcairo.so: undefined reference to `glDrawArrays@VERSION'
+			=> kill cairo pkgs(rebuild cairo pkgs)
+
+thunar-1.2.0	:
+			thunar-sbr-replace-renamer.c:192:20: error: 'PCRE_CONFIG_UTF8' undeclared (first use in this function
+			=> 重新build pcre pkgs.
+
+atk-1.2.0	: atk/atkstate.h:171:1: error: unknown type name 'G_CONST_RETURN'
+			=> atk-2.8.0
+
+udev-175	: configure: error: libacl not found
+			=> acl-2.2.52 要勾選
+
+mesalib-9.1.6	: configure: error: LLVM is required to build Gallium R300 on x86 and x86_64
+			=> Synaptic 套件管理程式 : 安裝llvm
+
+GConf-dbus 	: libfontconfig.so: undefined reference to `XML_ErrorString' .. 
+			make[3]: *** [gconf-sanity-check-2] Error 1
+			=>  ./configure 後加 LIBS=-lexpat
+
+fvwm-2.6.3	: configure: error: stdarg.h and vfprintf required
+
+parole-0.5.2 	: *** The required package libxfconf-0 was found on your system,
+			xfconf-4.8 >= 4.10 
+			=>降版本 parole-0.3.0
+
+xfcalendar-4.2.4 : checking for libxfce4mcs-client-1.0 >= 4.2.0... not found
+			=> libxfce4mcs-4.4.2 OK
+		   checking for dbh-1.0 >= 1.0... not found
+			=> dbh_1.0.24
+
+xfce4-mixer-4.10.0 : checking for unique-1.0 >= 1.1... not found
+			=> add unique-1.0 pkgs
+
+keybinder-0.3.0	: configure: error: could not find Python headers
+			=> 判斷式全mark掉  #as_fn_error $? "could not find Python headers" "$LINENO" 5(使用以下解決)
+			+--disable-python \
+			+--disable-lua \
+
+hal-0.5.14	: 捨棄..需要udev,而會造成版本衝突
+
+libisofs-1.2.6	: relocation R_ARM_MOVW_ABS_NC against `a local symbol' can not be used when making a shared object; recompile with -fPIC
+			=>??
+
+xfce4-themes-4.0.6 : checking for xfce4-panel-1.0 >= 4.0.0... Package xfce4-panel-1.0 was not found in the pkg-config search path. Perhaps you 				should add the directory containing `xfce4-panel-1.0.pc' to the PKG_CONFIG_PATH environment variable No 			package 'xfce4-panel-1.0' found
+			=> xfce4-panel-4.8.spec : 加入cp $RPM_BUILD_ROOT/%{pfx}/usr/lib/pkgconfig/libxfce4panel-1.0.pc 									$RPM_BUILD_ROOT/%{pfx}/usr/lib/pkgconfig/xfce4-panel-1.0.pc
+
+NetworkManager-0.9.4.0 : checking for /etc/fedora-release... configure: error: cannot check for file existence when cross compiling
+				error: Bad exit status from /home/retronix/work/Linux/MX6_LinuxBSP/tmp/rpm-tmp.34401 (%build)
+			=>	ac_cv_file__etc_fedora_release=no \
+				ac_cv_file__etc_mandriva_release=no \
+				ac_cv_file__etc_debian_version=no \
+				ac_cv_file__etc_redhat_release=no \
+				ac_cv_file__etc_SuSE_release=no \
+				ac_cv_file__etc_gentoo_release=no \
+				ac_cv_file__etc_arch_release=yes \
+				ac_cv_file__etc_slackware_version=no \
+				ac_cv_file__etc_frugalware_release=no \
+				ac_cv_file__etc_pardus_release=no \
+				ac_cv_file__etc_linexa_release=no \
+				ac_cv_file__etc_exherbo_release=no \
+			=> 需gudev1.0 --> 更改 udev.spec 拿掉 --disable-gudev .
+			=> Package libnl-1 was not found in the pkg-config search path.
+				=> build libnl pkgs, 改變.spec 產生 rootfs/usr/lib/pkgconfig/libnl-1.pc
+			=> Alternatively, you may set the environment variables NSS_CFLAGS
+				and NSS_LIBS to avoid the need to call pkg-config.
+				=> networkmanager.spec  加入 NSS_CFLAGS=-I$DEV_IMAGE/usr/include  NSS_LIBS="-L$DEV_IMAGE/usr/lib -lnss"
+				=> Perhaps you should add the directory containing `nss.pc'
+					=> nss.spec add nss.pc
+			=>error: couldn't find pppd.h. pppd development headers are required.
+				=> ac_cv_header_pppd_pppd_h=yes	\
+			=>nm-param-spec-specialized.c:396:2: error: 'g_value_array_get_nth' is deprecated (declared at 
+			  /home/retronix/work/Linux/MX6_LinuxBSP/rootfs/usr/include/glib-2.0/gobject/gvaluearray.h:65): 
+			  Use 'GArray' instead [-Werror=deprecated-declarations]
+				=> glib2 rebuild
+			=>crypto_nss.c:29:20: fatal error: prinit.h: No such file or directory
+
+gobject-introspection-1.36.0 :  checking for headers required to compile python extensions... not found
+				configure: error: Python headers not found
+			=> 	#if ac_fn_c_try_cpp "$LINENO"; then :
+				#  { $as_echo "$as_me:${as_lineno-$LINENO}: result: found" >&5
+				#$as_echo "found" >&6; }
+				#
+				#else
+				#  { $as_echo "$as_me:${as_lineno-$LINENO}: result: not found" >&5
+				#$as_echo "not found" >&6; }
+				#as_fn_error $? "Python headers not found" "$LINENO" 5
+				#fi
+			=> ????
+
+gnome-vfs-2.24.1	: checking for posix getpwuid_r... configure: error: in `/home/retronix/work/Linux/MX6_LinuxBSP/rpm
+				/BUILD/gnome-	vfs-2.24.4':
+				configure: error: cannot run test program while cross compiling
+			=> ac_cv_func_posix_getpwuid_r=no	\
+			 error: unknown type name 'GStaticMutex'
+			=> 改寫function , add patch
+			
+
+libbonobo-2.32.1	: /lib/ld-linux.so.3: No such file or directory
+			=> ln -s /usr/arm-linux-gnueabi/lib/ld-linux.so.3 /lib/ld-linux.so.3
+			orbit-idl-2: error while loading shared libraries: libIDL-2.so.0: cannot open shared object file: No such file or directory
+			=> make ORBIT_IDL=/usr/bin/orbit-idl-2
+			error: unknown type name 'GStaticRecMutex'
+
+libcanberra-0.30-0	: libtool: install: error: relink `libcanberra-gtk-module.la' with the above command before installing it
+			make[2]: *** [install-gtkmoduleLTLIBRARIES] Error 1
+				=> rebuild libtool
+				=> rebuild vorbisfile
+				=> 砍掉 libcanberra-0.30-0 rebuild
+
+gnome-keyring-2.24.1	: error: 'LIBTASN1_VERSION' undeclared
+			=> add libtasn1 pkgs
+			=> 2.30.3
+				=>ac_cv_file__dev_random=no	\
+				=>ac_cv_path_ASN1PARSER=yes	\
+			warning: libgp11.so.0, needed by ../../gcr/.libs/libgcr.so, not found (try using -rpath or -rpath-link)
+			=> 3.2.2 + patch
+
+libgnome-keyring-3.6.0	: /lib/x86_64-linux-gnu/libpthread.so.0: file not recognized: File format not recognized
+			=>	--with-libgcrypt-prefix=${DEV_IMAGE}/%{_prefix}
+
+				
+libbonoboui-2.24.0	: glib-2.0/glib/garray.h:31:2: error: #error "Only <glib.h> can be included directly."
+
+			elector-util.lo bonobo-file-selector-util.c
+			make[2]: *** [bonobo-a11y.lo] Error 1
+			==> 2.24.5 OK
+
+gnome-menus-3.6.0	: g-ir-scanner", line 44, in <module>  from giscanner.scannermain import scanner_main
+			=>  --enable-introspection=no (disable)
+
+
+php-5.3.10		: /lib/ld-linux-armhf.so.3: No such file or directory
+
+python-2.7.3		: /lib/ld-linux-armhf.so.3: No such file or directory
+			=>	sudo ln -s /usr/arm-linux-gnueabi/lib/ld-linux.so.3 /lib/ld-linux-armhf.so.3
+			: libpthread.so.0: cannot open shared object file: No such file or directory
+			=>	XX  -> 換了一包 pkgs.(BISHOP)
+			: gdbm-ndbm.h: No such file or directory
+			=>libgdbm-dev (host 安裝)
+			: fatal error: openssl/evp.h
+			=> installed libssl-dev package (host 安裝)
+			: fatal error: db.h: No such file or directory
+			=> libdb-dev (host 安裝)
+			: bsddb.c:699:14: error: 'DB_NOSERVER_HOME' undeclared 
+			=> libdb5.1-dev (host 安裝)
+			: readline.c:889:24: error: 'Function' undeclared
+			=> modify readline.c 檔案 (patch)
+			: -ldb-4 file 缺
+			=> check => /usr/lib/libdb-4.so -> /usr/lib/x86_64-linux-gnu/libdb-4.8.so
+			=> sudo ln -s /usr/lib/x86_64-linux-gnu/libdb-5.1.so /usr/lib/libdb-4.so
+			: dbmmodule.c:25:23: fatal error: gdbm-ndbm.h: No such file or directory
+			=> install package gdbm				
+
+httpd-2.4.4		: 缺apr1.h
+			=> libapr1-dev (host 安裝)
+
+pcre-8.35		: enable-pcregrep-libbz2 because bzlib.h
+			=> bzip2 (安裝)
+
+iptables-1.4.12-1	: error
+			=> make clean (資料夾中下)
+
+zlib-1.2.7		: error: failed dependencies:
+				ld-linux.so.3(GLIBC_2.4)   is needed by zlib-1.2.7-1
+				libc.so.6(GLIBC_2.4)   is needed by zlib-1.2.7-1
+				libgcc_s.so.1(GCC_3.5)   is needed by zlib-1.2.7-1
+
+./ltib			: defined(@array) is deprecated
+				需要安裝ltib前,Host需要的pkgs.
+				sudo apt-get update
+				sudo apt-get install build-essential zlib1g-dev rpm libncurses5-dev m4 bison liblzo2-dev uuid-dev tcl
+
+csr-wifi-5.1.0-1	:
+			error: failed dependencies:
+				ld-linux.so.3(GLIBC_2.4)   is needed by csr-wifi-5.1.0-1
+				libc.so.6(GLIBC_2.15)   is needed by csr-wifi-5.1.0-1
+				libc.so.6(GLIBC_2.4)   is needed by csr-wifi-5.1.0-1
+				libgcc_s.so.1(GCC_3.5)   is needed by csr-wifi-5.1.0-1
+				libpthread.so.0(GLIBC_2.4)   is needed by csr-wifi-5.1.0-1
+				librt.so.1(GLIBC_2.4)   is needed by csr-wifi-5.1.0-1
+			=> 在spec 上加入,解決
+				# to turn off all dependency checks
+				Autoreqprov     : no
+
+busybox-1.20.2-1	: 
+			error: unknown type name 'rlim_t'
+			=> busybox-1.20.2/include/libbb.h
+				加入 #include <sys/resource.h>
+
+
+libass-0.10.1		:
+			ass_shaper.c:32:19: fatal error: hb-ft.h: No such file or directory
+			-> 跳過. 先勾選掉..
+
+libtheora-1.1.1		:
+			error: fsl-linux-gnueabi/bin/ld: cannot find -lSDL
+			-> 跳過. 先勾選掉..
+
+
+
+gst-plugins-bad		:
+			error : fsl-linux-gnueabi/bin/ld: cannot find -lSDL
+			
+
+=============================重新build ltib (14.04) uboot:201409 kernel:3.10.17===========================================
+1. 下載 MX6_LinuxBSP
+	cp kernel / uboot
+	更改 main.lkc 的 config (uboot config / kernel config)
+	Specify LOADADDR on the commandline to build an uImage
+	加入 kernel-common.tmpl (sppec) 的 make 後 LOADADDR=${KERNEL_LOADADDR}
+
+1. MX6_LinuxBSP/pkgs/m4-1.4.16/lib/stdio.in.h	--	line 165
+	1. 出事
+		#undef gets
+		_GL_WARN_ON_USE (gets, "gets is a security hole - use fgets instead");
+	2. mask掉 (MX6_LinuxBSP\pkgs\m4-1.4.16.tar.gz -- 解 - 壓)
+		//_GL_WARN_ON_USE (gets, "gets is a security hole - use fgets instead");	//註釋掉
+	
+
+2. wget-1.14-1.x86_64.rpm 出事
+	1. 複製 /opt/freescale/ltib/usr/src/rpm/RPMS/x86_64/wget-1.14-1.x86_64.rpm (PC 到另 PC)
+
+3. openssl-1.0.1e-1
+	出事 : POD document had syntax errors at /usr/bin/pod2man
+	sudo rm /usr/bin/pod2man
+
+4, libxcb-1.9
+	出事 : AttributeError: 'list' object has no attribute 'lenfield_name'
+	add patch /src/c_client.py ---- line 687 (has-no-attribute-lenfield_name.patch)
+
+5. libnotify-0.7.5
+	出事 : No package 'gdk-pixbuf-2.0' found
+	缺 gdk-pixbuf (要先 build gdk-pixbuf-2.28.2)
+	出事 : No package 'gtk+-3.0' found
+	缺 gtk+-3.0 	(先勾掉libnotify ,再回來build)
+
+6. mesalib-9.1.6
+	出事 : configure: error: LLVM is required to build Gallium R300 on x86 and x86_64
+	install : sudo apt-get install llvm
+	出事 : cp: cannot stat '../build-host/src/glsl/builtin_compiler/builtin_compiler': No such file or directory
+	砍掉folder 重新build
+
+7. xorg-server-1.9.3
+	出事 : configure: error: tslib must be installed to build the tslib driver
+	xorg-server-1.9.3.spec 要加入路徑 TSLIB_CFLAGS=-Irootfs/usr/include TSLIB_LIBS='-Lrootfs/usr/lib -lts'
+	出事 : libtool: link: cannot determine absolute directory name
+	更改成正確路徑寫法	TSLIB_CFLAGS=-I${DEV_IMAGE}/usr/include TSLIB_LIBS='-L${DEV_IMAGE}/usr/lib -lts'
+	出事 : No package 'gl' found
+	安裝 Measlib => mesa-9.1.6
+	出事 : error: tslib must be installed to build the tslib driver
+	Spec 的 ./configure 加入
+		TSLIB_CFLAGS=-I$DEV_IMAGE/usr/include \
+		TSLIB_LIBS='-L$DEV_IMAGE/usr/lib	
+	出事 : ../../../libtool: line 5978: cd: EV_IMAGE/usr/lib: No such file or directory
+		
+
+
+8. tcltk-8.5.11
+	出事 : ./tclsh: 1: ./tclsh: Syntax error: word unexpected (expecting ")")
+	更改 暫時跳過 tcl-8.5.11/unix/Makefile.in 刪掉 install-msgs
+
+9. python-2.7.3
+	出事 : Parser/pgen: 1: Parser/pgen: Syntax error: word unexpected (expecting ")")
+		ORIG_PATH=$PATH
+		export PATH=$UNSPOOF_PATH
+		./configure
+		make python Parser/pgen
+		mv python hostpython
+		mv Parser/pgen Parser/hostpgen
+		make distclean
+		export PATH=$ORIG_PATH
+	Parser/tokenizer_pgen.o: error adding symbols: File in wrong format
+	解决辦法是：進入到python 编譯目錄 make clean 一下
+	失敗
+		a. 換樹莓派的. python-2.7.3 + patch
+		b. spec path : ROOTFS=/home/rtx-3110/Work/Project/Linux/MX6_LinuxBSP (更改)
+			arm-linux-gnueabihf-gcc (要有support)
+	出事 : bin/ld: cannot find -lgdbm_compat
+	缺libgdbm-compat.so 
+		a. spec增(install-compat),無法compile過.
+		b. 換Pkgs gdbm-1.8.3 版本,有些問題
+		c. 換Bishop的gdbm-1.8.3 pkgs - OK
+
+10. xserver-xorg-video-imx-viv-3.0.35-4.0.0
+	出事 : vivante_fbdev/vivante_fbdev_driver.c:30:25: fatal error: linux/mxcfb.h: No such file or directory
+	跳過 : 目前kernel是 3.10.17 有相對 pkgs
+
+11. gobject-introspection-1.34.2 
+	出事 : configure: error: Python headers not found
+	需要python-2.7	
+ 
+12. graphite2-1.2.3
+	出事 : cmake: not found
+	Host install cmake(synaptic)
+
+13. mozjs-17.0.0
+	出事 : 	nsinstall -R nsinstall ../dist/bin	(config.log - 找不到 windows.h)
+		/rpm/BUILD/mozjs-17.0.0/js/src/config/nsinstall: Syntax error: word unexpected (expecting ")")
+	試著 : 	/rpm/BUILD/mozjs-17.0.0/js/src/ make clean, make (build host - lib , exe)
+	出事 : bignum-dtoa.o: file not recognized: File format not recognized
+	試著 : 另一台copy mozjs-17.0.0.rpm ...
+
+14. gtk+-3.8.4 (gtk3-3.8.4)
+	出事 : 	GEN      gtkbuiltincache.h
+		/bin/bash: ./native/native-update-icon-cache: cannot execute binary file: Exec format error
+		XX拿掉 : rpm/BUILD/gtk+-3.8.4/gtk/Makefile.am
+		XX	if USE_EXTERNAL_ICON_CACHE
+		XX		gtk_update_icon_cache_program = $(GTK_UPDATE_ICON_CACHE)
+		XX	else
+		XX		if CROSS_COMPILING
+		XX			gtk_update_icon_cache_program = ./native/native-update-icon-cache
+		XX		else
+		XX			gtk_update_icon_cache_program = ./gtk-update-icon-cache$(EXEEXT)
+		XX		endif
+		XX	endif
+		XX出事 :  ../gtk+-3.8.4/build-aux/missing: line 81: automake-1.13: command not found	
+		XX	在 ../gtk+-3.8.4/ 執行 : autoreconf
+		XX出事 : ./configure: line 25306: `GOBJECT_INTROSPECTION_CHECK(1.32.0)
+	==> 重新砍掉. 
+	進入 gtk+-3.8.4/gtk folder
+		=> make clean
+		=> make		(但是於host環境,compile - 產生了該檔案)
+	=> ./ltib （過了,...)
+
+15. flac-1.3.0
+	error : usr/include/bits/mathinline.h:743:261: error: impossible constraint in 'asm'
+	先勾掉
+
+16. libtheora-1.1.1
+	error : arm-fsl-linux-gnueabi/bin/ld: cannot find -lSDL
+	先勾掉
+
+17. libao-1.1.0
+	error : ao_esd.c:37:17: fatal error: esd.h: No such file or directory
+	更改 spec : ./configure --disable-esd
+
+18. graphviz-2.34.0
+	error : /bin/bash: ./mkdefs: cannot execute binary file: Exec format error
+	進入
+		=> make clean
+		=> make		(但是於host環境,compile - 產生了該檔案)
+	=> ./ltib （../mkdefs gdefs.h < ../../lib/gvpr/gprdata  同樣問題)
+	先勾掉
+
+19. speex-1.2rc1
+	error : /usr/include/bits/mathinline.h:743:261: error: impossible constraint in 'asm'
+	先勾掉
+
+20. gst-plugins-good
+	error : esdsink.c:51:17: fatal error: esd.h: No such file or directory
+	更改 spec : --disable-esd
+
+21. gst-plugins-bad
+	error : ../arm-fsl-linux-gnueabi/bin/ld: cannot find -lSDL
+	更改 spec : --disable-sdl
+
+22. MPlayer-1.1.1
+	error : interface.c:(.text+0x3ecc): undefined reference to `ass_bottom_margin'
+		collect2: ld returned 1 exit statuss
+		make: *** [mplayer] Error 1
+
+23. imx-lib-3.0.35-4.0.0
+	error : pxp_lib.c:64:18: error: 'PXP_IOC_GET_CHAN' undeclared (first use in this function)
+	更換成 imx-lib-3.10.17-1.0.0 版本
+	更換成 imx-test-3.10.17-1.0.0 版本
+	更換成 libfslvpuwrap-1.0.46 版本
+	更換成 gpu-viv-bin-mx6q-3.10.17 版本
+	更換成 libX11-1.6.2 版本
+	更換成 xserver-xorg-video-imx-viv-3.10.17-1.0.2 版本	
+	
+
+24. libfslvpuwrap-1.0.46
+	error :	configure: error: lib_vpu is required, consider installing imx-lib
+	install imx-vpu-3.10.17 OK
+
+25. gpu-viv-bin-mx6q-3.10.17
+	更改.
+
+26. xorg-server-1.9.3
+	重新build, error :  libGL.so: undefined reference to "_XGetRequest"
+	更新 libX11-1.4.0 -> libX11-1.6.2
+
+27. xserver-xorg-video-imx-viv-3.10.17-1.0.2
+	-----------------------
+
+28. polkit-0.112
+	出事 : cc1: fatal error: /usr/include/js-17.0/js/RequiredDefines.h: No such file or directory
+	在 spec中 : 加入 LIBJS_CFLAGS="-I$DEV_IMAGE/usr/include/js-17.0 "
+	出事 : configure: error: Could not find pam/pam-devel, please install the needed packages
+		砍rpm : linux-pam-1.1.8 重新build 
+	出事 : undefined reference to `__gmpz_limbs_finish'
+		砍rpm : gmp-5.1.1 重新build
+
+29. pulseaudio-4.0
+	出事 : error: #error You must enable NEON instructions (e.g. -mfloat-abi=softfp -mfpu=neon) to use arm_neon.h
+	
+30. gnome-desktop-2.24.2
+	出事 : No package 'libgnomeui-2.0' found
+
+31. MPlayer-1.1.1
+	出事 : undefined reference to `ass_enabled'
+		砍rpm : libass-0.10.1-1.arm.rpm 重新build  - 無效
+	先勾掉
+
+32. gdm-3.7.92
+	出事 : can't find spec file for gdm-3.7.92
+	先勾掉, 沒spec file
+
+33. imx-lib-3.0.35-4.0.0
+	出事 : fatal error: linux/mxcfb.h: No such file or directory
+	換 YOCTO imx-lib-3.10.17
+
+34. fsl-alsa-plugins-1.0.25
+	出事 : fatal error: linux/mxc_asrc.h: No such file or directory
+	換 YOCTO fsl-alsa-plugins-1.0.25
+
+35. libfslvpuwrap-1.0.35
+	出事 : error: lib_vpu is required, consider installing imx-lib
+	換 YOCTO libfslvpuwrap-1.0.46
+	先build - imx-vpu-3.10.17 解決error
+
+36. gst-fsl-plugins-3.0.7
+	出事 : fatal error: linux/ipu.h: No such file or directory
+	換 YOCTO gst-fsl-plugins-3.0.11
+	出事 :  fatal error: linux/ipu.h: No such file or directoryIn file included from vss/mfw_gst_video_surface.c
+		fatal error: linux/mxcfb.h: No such file or directory
+	出事 : 	/usr/bin/ld: cannot find -lffi
+		/usr/bin/ld: cannot find -llzma
+	sudo apt-get install libffi-dev liblzma-dev
+	Add : 
+		1. checking X11/Xlib.h usability...   =>  sudo apt-get install libxtst-dev libxtst6
+	出事 : libs/Makefile.am:28: but option 'subdir-objects' is disabled
+	configure.ac : 加入 AM_INIT_AUTOMAKE([subdir-objects])
+
+	configure.ac
+	#        for h in "$4"; do
+	#            AC_CHECK_HEADERS([$h], HAVE_[$3]=yes && break, HAVE_[$3]=no)
+	#        done	
+	取代 : 
+        SAVE_CPPFLAGS="$CPPFLAGS"
+        CPPFLAGS="$CPPFLAGS `$PKG_CONFIG --cflags libfslaudiocodec`"
+        CPPFLAGS="$CPPFLAGS `$PKG_CONFIG --cflags libfslvideocodec`"
+        CPPFLAGS="$CPPFLAGS `$PKG_CONFIG --cflags libfslparser`"
+        CPPFLAGS="$CPPFLAGS `$PKG_CONFIG --cflags libfslvpuwrap`"
+        AC_CHECK_HEADERS([$4], HAVE_[$3]=yes, HAVE_[$3]=no && break)
+        CPPFLAGS="$SAVE_CPPFLAGS"
+    
+
+
+
+
+
+
+
+
+
+
+變更compiler : 為Hard Floating
+1. ltib -c config
+	a. Toolchain : Custom
+	b. /opt/freescale/usr/local/gcc-linaro-arm-linux-gnueabihf-4.8-2014.04_linux
+	c. arm-linux-gnueabihf-
+	d. -O2 -march=armv7-a -mfpu=vfpv3 -mfloat-abi=softfp
+
+2. busybox 
+	出事 : error: storage size of ‘rlimit_fsize’ isn’t known
+	a. loginutil/passwd : +#include <sys/resource.h>
+		------------------------------------------------不用freescale內建crosscompile - 將很多head要修
+		中止///
+3. 用tar ubuntu.tar
+
+=============================重新build ltib (12.04) uboot:201409 kernel:3.10.17===========================================
+1. xserver-xorg-video-imx-viv-3.0.35-4.0.0
+	出事 : vivante_fbdev/vivante_fbdev_driver.c:767:27: error: 'MXCFB_SET_SCR2_OFFSET' undeclared (first use in this function)
+
+2. openswan
+
+3. vsftpd
+	出事 : undefined reference to `pam_start'
+
+
+-----------Target執行 : ./autogen.sh --prefix=/usr && make all && sudo make DESTDIR=/ install
+gst-fsl-plugins-3.0.11 : 
+	出事 :	undefined reference to symbol 'g_print'
+		//lib/arm-linux-gnueabihf/libglib-2.0.so.0: error adding symbols: DSO missing from command line
+	a. readelf -s /lib/arm-linux-gnueabihhf/libglib-2.0.so.0 | grep g_print
+	b. add export PKG_CONFIG="`which pkg-config` --libs"
+
+	出事 : mfw_gst_v4lsrc.c:467:10: error: variable 'chip' has initializer but incomplete type
+	kernel : include / lib 複製到file system
+
+	編譯程序 :
+		export PKG_CONFIG="`which pkg-config` --static" / export PKG_CONFIG="`which pkg-config` --libs"
+		export FBHEADER_PATH=/usr/src/linux/include/
+		export PLATFORM=MX6
+		configure.ac 加入 AM_INIT_AUTOMAKE([subdir-objects]),
+	        		SAVE_CPPFLAGS="$CPPFLAGS"
+        			CPPFLAGS="$CPPFLAGS `$PKG_CONFIG --cflags libfslaudiocodec`"
+        			CPPFLAGS="$CPPFLAGS `$PKG_CONFIG --cflags libfslvideocodec`"
+        			CPPFLAGS="$CPPFLAGS `$PKG_CONFIG --cflags libfslparser`"
+       				CPPFLAGS="$CPPFLAGS `$PKG_CONFIG --cflags libfslvpuwrap`"
+        			AC_CHECK_HEADERS([$4], HAVE_[$3]=yes, HAVE_[$3]=no && break)
+        			CPPFLAGS="$SAVE_CPPFLAGS"
+				#        for h in "$4"; do
+				#            AC_CHECK_HEADERS([$h], HAVE_[$3]=yes && break, HAVE_[$3]=no)
+				#        done
+		./autogen.sh --prefix=/usr
+		./configure --prefix=/usr NM=nm BUILDER=LTIB CROSS_ROOT=/ VERSION=3.0.11 PACKAGE=gst-fsl-plugin
+		make BUILDER=LTIB
+		make install DESTDIR=/usr
+
+
+gst-plugins-good-0.10.31
+	出事 :	XInclude error : could not load xml/element-udpsrc.xml, and no fallback was found
+	pathc : gst/audiofx/audiocheblimit.c
+			@@ -46,12 +46,12 @@
+			  * be at most this value. A lower ripple value will allow a faster rolloff.
+  			  *
+			  * As a special case, a Chebyshev type 1 filter with no ripple is a Butterworth filter.
+			- * </para>
+			+ * <para>
+			  * <note><para>
+			  * Be warned that a too large number of poles can produce noise. The most poles are possible with
+			  * a cutoff frequency at a quarter of the sampling rate.
+			  * </para></note>
+			- * <para>
+			+ * </para>
+			  * <refsect2>
+
+			/gst/udp/gstudpsrc.c
+			@@ -78,14 +78,14 @@
+			  * </itemizedlist>
+			  * The message is typically used to detect that no UDP arrives in the receiver
+			  * because it is blocked by a firewall.
+			- * </para>
+			+ *
+			  * <para>
+			  * A custom file descriptor can be configured with the
+			  * #GstUDPSrc:sockfd property. The socket will be closed when setting the
+			  * element to READY by default. This behaviour can be
+			  * overriden with the #GstUDPSrc:closefd property, in which case the application
+			  * is responsible for closing the file descriptor.
+			- *
+			+ * </para>
+			  * <refsect2>
+		
+gst-plugins-bad-0.10.23
+		出事 : XInclude error : could not load xml/plugin-voamrwbenc.xml, and no fallback was found
+		patch :  gst-plugins-bad-0.10.23.new/docs/plugins/gst-plugins-bad-plugins-docs.sgml
+			-    <xi:include href="xml/plugin-voamrwbenc.xml" />
+
+libfslcodec-3.0.11
+		出事 : checking whether build environment is sane... configure: error: newly created file is 
+				older than distributed files!
+		插入網路線,
+
+
+modeps-1.0-1
+		出事 : error: failed to stat /home/retronix/.gvfs: Permission denied
+		空間太小, 清出空間來. OK!
+
+rt5370sta	:
+			Device Drivers  --->
+				[*] Network device support  --->
+			 		[*]   Wireless LAN  --->  
+						<*>   IEEE 802.11 for Host AP (Prism2/2.5/3 and WEP/TKIP/CCMP)
+						[*]     Support downloading firmware images with Host AP driver
+			[*] Networking support  ---> 
+				-*-   Wireless  ---> 
+						<*>   Generic IEEE 802.11 Networking Stack (mac80211)
+
+========================================= MX6_LinuxBSP ltib Rebuild==========================================
+1. libcap-2.22 : 			
+		出事 : cp: omitting directory ..
+		修改.spec : cp -avrf $RPM_BUILD_ROOT/%{pfx}/lib64/* $RPM_BUILD_ROOT/%{pfx}/usr/lib/.
+2. libxcb-1.9 :
+		出事 : AttributeError: 'list' object has no attribute 'lenfield_name'
+		修改 : add patch /src/c_client.py ---- line 687 (libxcb-1.9.1-list-object-has-no-attribute-lenfield_name.patch)
+3. libnotify-0.7.5 :
+		出事 : No package 'gdk-pixbuf-2.0' found
+		調整building 順序
+4. xorg-server-1.9.3 :
+		出事 : configure: error: tslib must be installed to build the tslib driver
+		出事 : ../../../libtool: line 5978: cd: rootfs/usr/lib: No such file or directory
+		xorg-server-1.9.3.spec 要加入路徑 TSLIB_CFLAGS=-I${DEV_IMAGE}/usr/include TSLIB_LIBS='-L${DEV_IMAGE}/usr/lib -lts'		
+5. tcltk-8.5.11 :
+		出事 : ./tclsh: 1: ./tclsh: Syntax error: word unexpected (expecting ")")
+		修改 : 刪除unix/Makefile.in 的install-msgs, install-libraries: libraries $(INSTALL_TZDATA) ""install-msgs""
+6. python-2.7.3 :
+		出事 : Parser/pgen: 1: Parser/pgen: Syntax error: word unexpected (expecting ")")
+		修改 : 換 bishop python-2.7.3 pkgs
+		出事 : Modules/readline.c  
+		修改 : 把(---) 都砍掉
+				+-    rl_startup_hook = (Function *)on_startup_hook;
+				+-    rl_pre_input_hook = (Function *)on_pre_input_hook;
+				+-    rl_attempted_completion_function = (CPPFunction *)flex_complete;
+		出事 : arm-fsl-linux-gnueabi/bin/ld: cannot find -lgdbm_compat 
+		修改 : ---
+		複製已經build 好的先用!!!skip..
+7. mozjs-17.0.0 :
+		出事 : js/src/config/nsinstall: Syntax error: word unexpected (expecting ")") 
+		cd rpm/BUILD/mozjs-17.0.0/js/src/config/    make clean , make
+		cd rpm/BUILD/mozjs-17.0.0/js/src/   make clean , make
+		出事 : bignum-dtoa.o: file not recognized: File format not recognized
+		複製已經build 好的先用!!!skip..
+8. gtk3-3.8.4 :
+		出事 : /bin/bash: ./native/native-update-icon-cache: cannot execute binary file: Exec format error
+		進入 gtk+-3.8.4/gtk folder
+		=> make clean
+		=> make		(但是於host環境,compile - 產生了該檔案)
+9. php-5.3.10 :
+		出事 : make: *** [install-build] Error 1
+		rm -rf /home/rtx-3110/Work/Project/Linux/MX6_LinuxBSP/tmp/php
+10. flac-1.3.0 :
+		出事 : /usr/include/bits/mathinline.h:743:261: error: impossible constraint in 'asm'
+		skip
+11. libao-1.1.0 :
+		出事 : ao_esd.c:37:17: fatal error: esd.h: No such file or directory
+		更改 spec : ./configure --disable-esd
+12. graphviz-2.34.0 :
+		出事 : /bin/bash: ./mkdefs: cannot execute binary file: Exec format error
+		skip
+13. speex-1.2rc1 :
+		出事 : /usr/include/bits/mathinline.h:743:261: error: impossible constraint in 'asm'
+		skip
+14. gst-plugins-good :
+		出事 : esdsink.c:51:17: fatal error: esd.h: No such file or directory
+		更改 spec : --disable-esd
+15. MPlayer-1.1.1 :
+		出事 : interface.c:(.text+0x284): undefined reference to `ass_enabled'
+		skip
+
+===================================install Q7 ubuntu 過程,後捨棄======================================================
+
+1. sudo mkfs.ext4 -L Q7_3.14.28 /dev/sdb1
+2. sudo tar pxvf ubuntu-14.04-hf-minimal-20151015.tgz -C /media/rtx-3110/Q7_3.14.28/
+3. sudo cp -avrf lib /media/rtx-3110/Q7_3.14.28/
+4. sudo cp -avrf include /media/rtx-3110/Q7_3.14.28/usr/
+5. sudo vi /media/rtx-3110/Q7_3.14.28/etc/fstab
+6. sudo cp -avrf imx6 misc /media/rtx-3110/Q7_3.14.28/home/rtx/
+	--------- console ------
+7. apt-get update
+8. apt-get upgrade
+
+9. imx-lib-3.14.28-1.0.0
+	a. tar -zxvf imx-lib-3.14.28-1.0.0.tar.gz
+	b. make -j1 PLATFORM=IMX6Q all
+		- apt-get install g++
+	c. make install
+		- modify rng/ screenlayer/ sim/ Makefile don't install
+
+10. firmware-imx-3.14.28
+	a. chmod +x firmware-imx-3.14.28-1.0.0.bin
+	b. ./firmware-imx-3.14.28-1.0.0.bin (Unpacking file)
+	c. cp -avrf firmware/* /lib/firmware/
+
+11. libfslcodec-4.0.3
+	a. chmod +x libfslcodec-4.0.3.bin
+	b. ./libfslcodec-4.0.3.bin (Unpacking file)
+	c. ./configure
+	d. ./autogen.sh
+		- apt-get install autoconf
+		- apt-get install make
+	e. ./autogen.sh --prefix=/usr && make all && sudo make DESTDIR=/ install
+
+12. libfslparser-4.0.3
+	a. chmod +x libfslparser-4.0.3.bin
+	b. ./libfslparser-4.0.3.bin (Unpacking file)
+	c. ./autogen.sh --prefix=/usr && make all && sudo make DESTDIR=/ install
+
+13. imx-vpu-5.4.28
+	a. chmod +x imx-vpu-5.4.28.bin
+	b. ./imx-vpu-5.4.28.bin
+	c. make -j1 PLATFORM=IMX6Q all
+	d. make install
+
+14. libfslvpuwrap-1.0.58
+	a. chmod +x libfslvpuwrap-1.0.58.bin
+	b. ./libfslvpuwrap-1.0.58.bin
+	c. ./autogen.sh --prefix=/usr && make all && sudo make DESTDIR=/ install
+		- apt-get install libtool
+
+15. gstreamer-0.10.36
+	a. tar jxvf gstreamer-0.10.36.tar.bz2
+	b. ./autogen.sh --prefix=/usr && make all && sudo make DESTDIR=/ install
+		- apt-get install autopoint
+		- apt-get install pkg-config
+		- apt-get install bison
+		- apt-get install flex
+		- apt-get install gtk-doc-tools
+		- apt-get install libglib2.0-dev
+		- apt-get install libxml2-dev
+		- vi gst/parse/grammar.y	(modify)
+
+16. gst-plugins-base-0.10.36
+	a. tar jxvf gst-plugins-base-0.10.36.tar.bz2
+	b. ./autogen.sh --prefix=/usr && make all && sudo make DESTDIR=/ install
+
+17. gst-fsl-plugins-4.0.3
+	a. tar -zxvf gst-fsl-plugins-4.0.3.tar.gz
+	b. ./configure PLATFORM=MX6 --prefix=/usr
+	c. make all
+		- apt-get install libx11-dev
+		- apt-get install libxext-dev
+		- vi src/misc/v4l_source/src/mfw_gst_v4lsrc.c (modify)
+		- vi src/misc/tvsrc/src/mfw_gst_tvsrc.c (modify)
+		- vi tools/gplay/Makefile (modify)
+	d. make install
+
+18. xorg + python interface
+	a. apt-get install xorg
+	b. apt-get install python-gtk2-dev
+	c. apt-get install python-netifaces
+	d. apt-get install python-netaddr
+	e. apt-get install python-gst0.10-dev
+	f. apt-get install python-gtk2
+	
+19. gstreamer-1.4.1
+	a. tar Jxvf gstreamer-1.4.1.tar.xz
+	b. ./autogen.sh --prefix=/usr && make all && sudo make DESTDIR=/ install
+
+20. imx-gpu-viv-5.0.11.p4.5-hfp
+	a. chmod +x imx-gpu-viv-5.0.11.p4.5-hfp.bin
+	b. cp 到相關目錄上.
+	c. /opt/viv_samples/es20/vv_launcher/vv_launcher
+
+21. gst-plugins-good-0.10.31
+	a. tar jxvf gst-plugins-good-0.10.31.tar.bz2
+	b. ./autogen.sh --prefix=/usr && make all && sudo make DESTDIR=/ install
+		- vi sys/v4l2/gstv4l2bufferpool.c	(modify)
+			sed -i -e "/input:/d" sys/v4l2/gstv4l2bufferpool.c
+		- vi sys/v4l2/v4l2_calls.c	(modify)
+			sed -i -e "/case V4L2_CID_HCENTER/d" -e "/case V4L2_CID_VCENTER/d" sys/v4l2/v4l2_calls.c
+	c. ./configure --prefix=/usr --sysconfdir=/etc --with-gtk=3.0 --with-package-name="GStreamer Good Plugins 0.10.31 BLFS" --with-package-origin="http://www.linuxfromscratch.org/blfs/view/systemd/"
+		- apt-get install liborc-0.4-dev
+	d. make
+	e. make install
+
+
+22. gst-plugins-base-1.4.1
+	a. tar Jxvf gst-plugins-base-1.4.1.tar.xz
+	b. ./autogen.sh --prefix=/usr && make all && sudo make DESTDIR=/ install
+		- modify docs/ Makefile don't install
+
+23. xorg-server-1.15.1 (重新安裝)
+	a. apt-get install xserver-xorg-core (下載xorg-server-1.15.1)
+	b. ./configure --prefix=/usr
+		- ... apt-get install ..packages
+		- apt-get install xserver-xorg-input-mouse
+		- apt-get install xserver-xorg-input-kbd
+		- apt-get install xserver-xorg-video-fbdev
+		- apt-get install xserver-xorg-video-modesetting
+		- libpciaccess-dev
+	c. make all
+	d. make install
+
+24. xserver-xorg-video-imx-viv-5.0.11.p4.5
+	a. make all
+		- modify makefile.linux, makefile.tc
+			add LOCAL_CFLAGS += -I$(sysroot)root/xorg-server-1.15.1/hw/xfree86/common
+			modify CFLAGS += -mfpu=vfp -mfloat-abi=hard
+	b. make install
+
+======================pico ltib building=============================
+1. coreutils-8.25 :
+		error: Failed dependencies:
+			libacl.so.1(ACL_1.0) is needed by coreutils-8.25-1.arm
+			libattr.so.1(ATTR_1.1) is needed by coreutils-8.25-1.arm
+2. libcap-2.22 :
+		pam_cap.c:19:34: fatal error: security/pam_modules.h: ?????????
+		#include <security/pam_modules.h>
+		skip - 再回來build - OK (building 順序問題)
+3. udev-dev-175 :
+		error: Failed dependencies:
+			libacl.so.1(ACL_1.0) is needed by udev-dev-175-1.arm
+4. udev-175 :
+		error: Failed dependencies:
+			libacl.so.1(ACL_1.0) is needed by udev-175-1.arm
+5. xf86-input-evdev-2.10.1 :
+		error: Failed dependencies:
+			libudev.so.0 is needed by xf86-input-evdev-2.10.1-1.arm
+6. libnotify-0.7.6 ：
+		configure: error: Package requirements (gtk+-3.0 >= 2.90) were not met:	
+			No package 'gtk+-3.0' found
+		skip - build gtk+-3.0 - 再回來build - OK 
+7. upower-0.9.21 :
+		error: Failed dependencies:
+			libgudev-1.0.so.0 is needed by upower-0.9.21-1.arm
+8. php-5.5.3 :
+		error: Failed dependencies:
+			libmysqlclient.so.18 is needed by php-5.5.3-1.arm
+			libmysqlclient.so.18(libmysqlclient_18) is needed by php-5.5.3-1.arm
+9. pulseaudio-4.0 :
+		error: Failed dependencies:
+			libcap.so.2 is needed by pulseaudio-4.0-1.arm
+			libudev.so.0 is needed by pulseaudio-4.0-1.arm
+10. libao-1.1.0 :
+		ao_esd.c:37:17: fatal error: esd.h: ?????????
+ 		#include <esd.h>
+		skip
+11. mpg123-1.15.4 :
+		error: Failed dependencies:
+			libpulse-simple.so.0 is needed by mpg123-1.15.4-1.arm
+			libpulse-simple.so.0(PULSE_0) is needed by mpg123-1.15.4-1.arm
+			libpulse.so.0 is needed by mpg123-1.15.4-1.arm
+			libpulse.so.0(PULSE_0) is needed by mpg123-1.15.4-1.arm
+12. gst-plugins-base-0.10.36 :
+		error: Failed dependencies:
+			libgudev-1.0.so.0 is needed by gst-plugins-base-0.10.36-1.arm
+13. gst-plugins-good-0.10.31 :
+		esdsink.c:51:17: fatal error: esd.h: ?????????
+ 		#include <esd.h>
+		skip
+14. gst-plugins-bad-0.10.23 :
+		error: Failed dependencies:
+			libgstapp-0.10.so.0 is needed by gst-plugins-bad-0.10.23-1.arm
+			libgstaudio-0.10.so.0 is needed by gst-plugins-bad-0.10.23-1.arm
+			libgstfft-0.10.so.0 is needed by gst-plugins-bad-0.10.23-1.arm
+			libgstinterfaces-0.10.so.0 is needed by gst-plugins-bad-0.10.23-1.arm
+			libgstpbutils-0.10.so.0 is needed by gst-plugins-bad-0.10.23-1.arm
+			libgstriff-0.10.so.0 is needed by gst-plugins-bad-0.10.23-1.arm
+			libgstrtp-0.10.so.0 is needed by gst-plugins-bad-0.10.23-1.arm
+			libgstsdp-0.10.so.0 is needed by gst-plugins-bad-0.10.23-1.arm
+			libgsttag-0.10.so.0 is needed by gst-plugins-bad-0.10.23-1.arm
+			libgstvideo-0.10.so.0 is needed by gst-plugins-bad-0.10.23-1.arm
+15. gst-plugins-ugly-0.10.19 :
+		error: Failed dependencies:
+			libgstaudio-0.10.so.0 is needed by gst-plugins-ugly-0.10.19-1.arm
+			libgstpbutils-0.10.so.0 is needed by gst-plugins-ugly-0.10.19-1.arm
+			libgstriff-0.10.so.0 is needed by gst-plugins-ugly-0.10.19-1.arm
+			libgstrtp-0.10.so.0 is needed by gst-plugins-ugly-0.10.19-1.arm
+			libgstrtsp-0.10.so.0 is needed by gst-plugins-ugly-0.10.19-1.arm
+			libgstsdp-0.10.so.0 is needed by gst-plugins-ugly-0.10.19-1.arm
+			libgsttag-0.10.so.0 is needed by gst-plugins-ugly-0.10.19-1.arm
+			libgstvideo-0.10.so.0 is needed by gst-plugins-ugly-0.10.19-1.arm
+
+
+
+		Answer : Ad "Autoreqprov     : no" to spec
+======================pico ltib building=============================
+1. base_libs-1.2-1 :
+		出事 : 
+		error: failed dependencies:
+			ld-linux-armhf.so.3(GLIBC_2.4)   is needed by base_libs-1.2-1
+			ld-linux-armhf.so.3(GLIBC_PRIVATE)   is needed by base_libs-1.2-1
+			libc.so.6(GLIBC_2.17)   is needed by base_libs-1.2-1
+			libgcc_s.so.1(GCC_3.3)   is needed by base_libs-1.2-1
+			libgcc_s.so.1(GCC_3.5)   is needed by base_libs-1.2-1
+			libgcc_s.so.1(GCC_4.3.0)   is needed by base_libs-1.2-1
+		try : ./ltib -p base_libs -f
+			duplication
+		skip : 置換rpm -- chase
+2. intltool-0.50.2 :
+		error: db5 error(-30969) from dbenv->open: BDB0091 DB_VERSION_MISMATCH: Database environment version mismatch
+3. usbutils-007 :
+		error: Package requirements (libusb-1.0 >= 1.0.0)
+		skip : 修改rpm -- chase
+4. libiconv-1.14-1 :
+		error: Failed dependencies: libiconv.so.2 is needed by libiconv-1.14-1.arm
+
+1. libcap-2.22-1 :
+		db5 error(-30969) from dbenv->open: BDB0091 DB_VERSION_MISMATCH: Database environment version mismatch
+		--以上非問題!!
+		Answer : Add cp -avrf  to libcap-2.22.spec
+2. vsftpd-2.0.5-1 :
+		error: Failed dependencies:
+			libcap.so.2 is needed by vsftpd-2.0.5-1.arm
+3. udev-175-1 : 
+		error: Failed dependencies:
+			libacl.so.1(ACL_1.0) is needed by udev-175-1.arm
+4. Mesa-10.0.5-1 :
+		error: Failed dependencies:
+			libudev.so.0 is needed by Mesa-10.0.5-1.arm
+5. xf86-input-evdev-2.10.1-1 :
+		error: Failed dependencies:
+			libudev.so.0 is needed by xf86-input-evdev-2.10.1-1.arm	
+6. cairo-1.12.14-1 :
+		error: Failed dependencies:
+			libEGL.so.1 is needed by cairo-1.12.14-1.arm
+			libGL.so.1 is needed by cairo-1.12.14-1.arm
+7. coreutils-8.25-1 :
+		error: Failed dependencies:
+			libacl.so.1(ACL_1.0) is needed by coreutils-8.25-1.arm
+			libattr.so.1(ATTR_1.1) is needed by coreutils-8.25-1.arm
+			libcap.so.2 is needed by coreutils-8.25-1.arm
+8. libtiff-3.8.2-1 :
+		error: Failed dependencies:
+			libGL.so.1 is needed by libtiff-3.8.2-1.arm
+			libGLU.so.1 is needed by libtiff-3.8.2-1.arm
+			libglut.so.3 is needed by libtiff-3.8.2-1.arm
+9. cracklib-2.9.0-1 :
+		error: Failed dependencies:
+			python(abi) = 2.7 is needed by cracklib-2.9.0-1.arm
+10. udev-dev-175-1 :
+		error: Failed dependencies:
+			libacl.so.1(ACL_1.0) is needed by udev-dev-175-1.arm
+11. xdriinfo-1.0.5-1 :
+		error: Failed dependencies:
+			libGL.so.1 is needed by xdriinfo-1.0.5-1.arm
+12. glu-9.0.0-1 :
+		error: Failed dependencies:
+			libGL.so.1 is needed by glu-9.0.0-1.arm
+13. freeglut-2.8.1-1 :
+		error: Failed dependencies:
+			libGL.so.1 is needed by freeglut-2.8.1-1.arm
+14. harfbuzz-0.9.18-1 :
+		error: Failed dependencies:
+			libcairo.so.2 is needed by harfbuzz-0.9.18-1.arm
+15. pango-1.34.1-1 :
+		error: Failed dependencies:
+			libEGL.so.1 is needed by pango-1.34.1-1.arm
+			libGL.so.1 is needed by pango-1.34.1-1.arm
+			libGLESv2.so.2 is needed by pango-1.34.1-1.arm
+			libcairo.so.2 is needed by pango-1.34.1-1.arm
+			libharfbuzz.so.0 is needed by pango-1.34.1-1.arm
+16. gdk-pixbuf-2.28.2-1 :
+		error: Failed dependencies:
+			libtiff.so.3 is needed by gdk-pixbuf-2.28.2-1.arm
+17. gtk2-2.24.20-1 :
+		error: Failed dependencies:
+			libcairo.so.2 is needed by gtk2-2.24.20-1.arm
+			libgdk_pixbuf-2.0.so.0 is needed by gtk2-2.24.20-1.arm
+			libpango-1.0.so.0 is needed by gtk2-2.24.20-1.arm
+			libpangocairo-1.0.so.0 is needed by gtk2-2.24.20-1.arm
+			libpangoft2-1.0.so.0 is needed by gtk2-2.24.20-1.arm
+18. libnotify-0.7.6 :
+
+19. upower-0.9.21-1 :
+		error: Failed dependencies:
+			libgudev-1.0.so.0 is needed by upower-0.9.21-1.arm
+20. php-5.5.3-1 :
+		error: Failed dependencies:
+			libmysqlclient.so.18 is needed by php-5.5.3-1.arm
+			libmysqlclient.so.18(libmysqlclient_18) is needed by php-5.5.3-1.arm
+21. GConf-dbus-2.16.0-1 :
+		error: Failed dependencies:
+			libcairo.so.2 is needed by GConf-dbus-2.16.0-1.arm
+			libgdk-x11-2.0.so.0 is needed by GConf-dbus-2.16.0-1.arm
+			libgdk_pixbuf-2.0.so.0 is needed by GConf-dbus-2.16.0-1.arm
+			libgtk-x11-2.0.so.0 is needed by GConf-dbus-2.16.0-1.arm
+			libpango-1.0.so.0 is needed by GConf-dbus-2.16.0-1.arm
+			libpangocairo-1.0.so.0 is needed by GConf-dbus-2.16.0-1.arm
+			libpangoft2-1.0.so.0 is needed by GConf-dbus-2.16.0-1.arm
+22. libglade-2.6.4-1 :
+		error: Failed dependencies:
+			libcairo.so.2 is needed by libglade-2.6.4-1.arm
+			libgdk-x11-2.0.so.0 is needed by libglade-2.6.4-1.arm
+			libgdk_pixbuf-2.0.so.0 is needed by libglade-2.6.4-1.arm
+			libgtk-x11-2.0.so.0 is needed by libglade-2.6.4-1.arm
+			libpango-1.0.so.0 is needed by libglade-2.6.4-1.arm
+			libpangocairo-1.0.so.0 is needed by libglade-2.6.4-1.arm
+			libpangoft2-1.0.so.0 is needed by libglade-2.6.4-1.arm
+23. pulseaudio-4.0-1 :
+		error: Failed dependencies:
+			libcap.so.2 is needed by pulseaudio-4.0-1.arm
+			libgconf-2.so.4 is needed by pulseaudio-4.0-1.arm
+			libudev.so.0 is needed by pulseaudio-4.0-1.arm
+24. libao-1.1.0 :
+		ao_esd.c:37:17: fatal error: esd.h: ?????????
+		skip
+25. graphviz-2.34.0-1 :
+		error: Failed dependencies:
+			libcairo.so.2 is needed by graphviz-2.34.0-1.arm
+			libgdk-x11-2.0.so.0 is needed by graphviz-2.34.0-1.arm
+			libgdk_pixbuf-2.0.so.0 is needed by graphviz-2.34.0-1.arm
+			libgtk-x11-2.0.so.0 is needed by graphviz-2.34.0-1.arm
+			libpango-1.0.so.0 is needed by graphviz-2.34.0-1.arm
+			libpangocairo-1.0.so.0 is needed by graphviz-2.34.0-1.arm
+			libpangoft2-1.0.so.0 is needed by graphviz-2.34.0-1.arm
+26. mpg123-1.15.4-1 :
+		error: Failed dependencies:
+			libpulse-simple.so.0 is needed by mpg123-1.15.4-1.arm
+			libpulse-simple.so.0(PULSE_0) is needed by mpg123-1.15.4-1.arm
+			libpulse.so.0 is needed by mpg123-1.15.4-1.arm
+			libpulse.so.0(PULSE_0) is needed by mpg123-1.15.4-1.arm
+27. gst-plugins-base-0.10.36-1 :
+		error: Failed dependencies:
+			libcairo.so.2 is needed by gst-plugins-base-0.10.36-1.arm
+			libgudev-1.0.so.0 is needed by gst-plugins-base-0.10.36-1.arm
+			libpango-1.0.so.0 is needed by gst-plugins-base-0.10.36-1.arm
+			libpangocairo-1.0.so.0 is needed by gst-plugins-base-0.10.36-1.arm
+28. gst-plugins-good-0.10.31 :
+		esdsink.c:51:17: fatal error: esd.h: ?????????
+		skip
+29. gst-plugins-bad-0.10.23-1 :
+		error: Failed dependencies:
+			libgstapp-0.10.so.0 is needed by gst-plugins-bad-0.10.23-1.arm
+			libgstaudio-0.10.so.0 is needed by gst-plugins-bad-0.10.23-1.arm
+			libgstfft-0.10.so.0 is needed by gst-plugins-bad-0.10.23-1.arm
+			libgstinterfaces-0.10.so.0 is needed by gst-plugins-bad-0.10.23-1.arm
+			libgstpbutils-0.10.so.0 is needed by gst-plugins-bad-0.10.23-1.arm
+			libgstriff-0.10.so.0 is needed by gst-plugins-bad-0.10.23-1.arm
+			libgstrtp-0.10.so.0 is needed by gst-plugins-bad-0.10.23-1.arm
+			libgstsdp-0.10.so.0 is needed by gst-plugins-bad-0.10.23-1.arm
+			libgsttag-0.10.so.0 is needed by gst-plugins-bad-0.10.23-1.arm
+			libgstvideo-0.10.so.0 is needed by gst-plugins-bad-0.10.23-1.arm
+30. gst-plugins-ugly-0.10.19-1 :
+		error: Failed dependencies:
+			libgstaudio-0.10.so.0 is needed by gst-plugins-ugly-0.10.19-1.arm
+			libgstpbutils-0.10.so.0 is needed by gst-plugins-ugly-0.10.19-1.arm
+			libgstriff-0.10.so.0 is needed by gst-plugins-ugly-0.10.19-1.arm
+			libgstrtp-0.10.so.0 is needed by gst-plugins-ugly-0.10.19-1.arm
+			libgstrtsp-0.10.so.0 is needed by gst-plugins-ugly-0.10.19-1.arm
+			libgstsdp-0.10.so.0 is needed by gst-plugins-ugly-0.10.19-1.arm
+			libgsttag-0.10.so.0 is needed by gst-plugins-ugly-0.10.19-1.arm
+			libgstvideo-0.10.so.0 is needed by gst-plugins-ugly-0.10.19-1.arm
+31. gst-ffmpeg-0.10.13-1 :
+		error: Failed dependencies:
+			libgstaudio-0.10.so.0 is needed by gst-ffmpeg-0.10.13-1.arm
+			libgstpbutils-0.10.so.0 is needed by gst-ffmpeg-0.10.13-1.arm
+			libgstvideo-0.10.so.0 is needed by gst-ffmpeg-0.10.13-1.arm
+32 gtk-xfce-engine-2.10.0 :
+		error: Failed dependencies:
+			libcairo.so.2 is needed by gtk-xfce-engine-2.10.0-0.arm
+			libgdk-x11-2.0.so.0 is needed by gtk-xfce-engine-2.10.0-0.arm
+			libgdk_pixbuf-2.0.so.0 is needed by gtk-xfce-engine-2.10.0-0.arm
+			libgtk-x11-2.0.so.0 is needed by gtk-xfce-engine-2.10.0-0.arm
+			libpango-1.0.so.0 is needed by gtk-xfce-engine-2.10.0-0.arm
+			libpangocairo-1.0.so.0 is needed by gtk-xfce-engine-2.10.0-0.arm
+			libpangoft2-1.0.so.0 is needed by gtk-xfce-engine-2.10.0-0.arm
+33. libxfce4ui-4.12.0 :
+		error: Failed dependencies:
+			libcairo.so.2 is needed by libxfce4ui-4.12.0-0.arm
+			libgdk-x11-2.0.so.0 is needed by libxfce4ui-4.12.0-0.arm
+			libgdk_pixbuf-2.0.so.0 is needed by libxfce4ui-4.12.0-0.arm
+			libgtk-x11-2.0.so.0 is needed by libxfce4ui-4.12.0-0.arm
+			libpango-1.0.so.0 is needed by libxfce4ui-4.12.0-0.arm
+			libpangocairo-1.0.so.0 is needed by libxfce4ui-4.12.0-0.arm
+			libpangoft2-1.0.so.0 is needed by libxfce4ui-4.12.0-0.arm
+34. exo-0.10.3 : 
+		error: Failed dependencies:
+			libcairo.so.2 is needed by exo-0.10.3-0.arm
+			libgdk-x11-2.0.so.0 is needed by exo-0.10.3-0.arm
+			libgdk_pixbuf-2.0.so.0 is needed by exo-0.10.3-0.arm
+			libgtk-x11-2.0.so.0 is needed by exo-0.10.3-0.arm
+			libpango-1.0.so.0 is needed by exo-0.10.3-0.arm
+			libpangocairo-1.0.so.0 is needed by exo-0.10.3-0.arm
+			libpangoft2-1.0.so.0 is needed by exo-0.10.3-0.arm
+			libxfce4ui-1.so.0 is needed by exo-0.10.3-0.arm
+35. libwnck-2.31.0 :
+		error: Failed dependencies:
+			libcairo.so.2 is needed by libwnck-2.31.0-0.arm
+			libgdk-x11-2.0.so.0 is needed by libwnck-2.31.0-0.arm
+			libgdk_pixbuf-2.0.so.0 is needed by libwnck-2.31.0-0.arm
+			libgtk-x11-2.0.so.0 is needed by libwnck-2.31.0-0.arm
+			libpango-1.0.so.0 is needed by libwnck-2.31.0-0.arm
+			libpangocairo-1.0.so.0 is needed by libwnck-2.31.0-0.arm
+			libpangoft2-1.0.so.0 is needed by libwnck-2.31.0-0.arm
+36. libxfcegui4-4.10.0 :
+		error: Failed dependencies:
+			libcairo.so.2 is needed by libxfcegui4-4.10.0-0.arm
+			libgdk-x11-2.0.so.0 is needed by libxfcegui4-4.10.0-0.arm
+			libgdk_pixbuf-2.0.so.0 is needed by libxfcegui4-4.10.0-0.arm
+			libglade-2.0.so.0 is needed by libxfcegui4-4.10.0-0.arm
+			libgtk-x11-2.0.so.0 is needed by libxfcegui4-4.10.0-0.arm
+			libpango-1.0.so.0 is needed by libxfcegui4-4.10.0-0.arm
+			libpangocairo-1.0.so.0 is needed by libxfcegui4-4.10.0-0.arm
+			libpangoft2-1.0.so.0 is needed by libxfcegui4-4.10.0-0.arm
+37. xfce4-appfinder-4.12.0 :
+		error: Failed dependencies:
+			libgarcon-1.so.0 is needed by xfce4-appfinder-4.12.0-0.arm
+			libgdk-x11-2.0.so.0 is needed by xfce4-appfinder-4.12.0-0.arm
+			libgdk_pixbuf-2.0.so.0 is needed by xfce4-appfinder-4.12.0-0.arm
+			libgtk-x11-2.0.so.0 is needed by xfce4-appfinder-4.12.0-0.arm
+			libxfce4ui-1.so.0 is needed by xfce4-appfinder-4.12.0-0.arm
+38. xfce4-panel-4.12.0 :
+		error: Failed dependencies:
+			libcairo.so.2 is needed by xfce4-panel-4.12.0-0.arm
+			libexo-1.so.0 is needed by xfce4-panel-4.12.0-0.arm
+			...
+39. xfce4-session-4.12.0 :
+		error: Failed dependencies:
+			libcairo.so.2 is needed by xfce4-session-4.12.0-0.arm
+			libgdk-x11-2.0.so.0 is needed by xfce4-session-4.12.0-0.arm
+			...
+40. xfce4-settings-4.12.0 :
+		error: Failed dependencies:
+			libcairo.so.2 is needed by xfce4-settings-4.12.0-0.arm
+			libexo-1.so.0 is needed by xfce4-settings-4.12.0-0.arm
+			...
+41. xfwm4-4.12.0 :
+		error: Failed dependencies:
+			libcairo.so.2 is needed by xfwm4-4.12.0-0.arm
+			libgdk-x11-2.0.so.0 is needed by xfwm4-4.12.0-0.arm
+			libgdk_pixbuf-2.0.so.0 is needed by xfwm4-4.12.0-0.arm
+			...
+42. xfce-utils-4.8.3 :
+		error: Failed dependencies:
+			libgdk-x11-2.0.so.0 is needed by xfce-utils-4.8.3-0.arm
+			libgtk-x11-2.0.so.0 is needed by xfce-utils-4.8.3-0.arm
+			libxfce4ui-1.so.0 is needed by xfce-utils-4.8.3-0.arm
+43. thunar-vfs-1.2.0 :
+		error: Failed dependencies:
+			libcairo.so.2 is needed by thunar-vfs-1.2.0-0.arm
+			libexo-1.so.0 is needed by thunar-vfs-1.2.0-0.arm
+			libgconf-2.so.4 is needed by thunar-vfs-1.2.0-0.arm
+			libgdk-x11-2.0.so.0 is needed by thunar-vfs-1.2.0-0.arm
+			libgdk_pixbuf-2.0.so.0 is needed by thunar-vfs-1.2.0-0.arm
+			libgtk-x11-2.0.so.0 is needed by thunar-vfs-1.2.0-0.arm
+			libpango-1.0.so.0 is needed by thunar-vfs-1.2.0-0.arm
+			libpangocairo-1.0.so.0 is needed by thunar-vfs-1.2.0-0.arm
+			libpangoft2-1.0.so.0 is needed by thunar-vfs-1.2.0-0.arm
+44. Thunar-1.6.6 :
+		error: Failed dependencies:
+			libcairo.so.2 is needed by Thunar-1.6.6-0.arm
+			libexo-1.so.0 is needed by Thunar-1.6.6-0.arm
+			libgdk-x11-2.0.so.0 is needed by Thunar-1.6.6-0.arm
+			libgdk_pixbuf-2.0.so.0 is needed by Thunar-1.6.6-0.arm
+			libgtk-x11-2.0.so.0 is needed by Thunar-1.6.6-0.arm
+			libgudev-1.0.so.0 is needed by Thunar-1.6.6-0.arm
+			libpango-1.0.so.0 is needed by Thunar-1.6.6-0.arm
+			libpangocairo-1.0.so.0 is needed by Thunar-1.6.6-0.arm
+			libpangoft2-1.0.so.0 is needed by Thunar-1.6.6-0.arm
+			libxfce4panel-1.0.so.4 is needed by Thunar-1.6.6-0.arm
+			libxfce4ui-1.so.0 is needed by Thunar-1.6.6-0.arm
+45. xfdesktop-4.12.0 :
+		error: Failed dependencies:
+			libcairo.so.2 is needed by xfdesktop-4.12.0-0.arm
+			libexo-1.so.0 is needed by xfdesktop-4.12.0-0.arm
+			libgarcon-1.so.0 is needed by xfdesktop-4.12.0-0.arm
+			libgdk-x11-2.0.so.0 is needed by xfdesktop-4.12.0-0.arm
+			libgdk_pixbuf-2.0.so.0 is needed by xfdesktop-4.12.0-0.arm
+			libgtk-x11-2.0.so.0 is needed by xfdesktop-4.12.0-0.arm
+			libpango-1.0.so.0 is needed by xfdesktop-4.12.0-0.arm
+			libpangocairo-1.0.so.0 is needed by xfdesktop-4.12.0-0.arm
+			libpangoft2-1.0.so.0 is needed by xfdesktop-4.12.0-0.arm
+			libthunarx-2.so.0 is needed by xfdesktop-4.12.0-0.arm
+			libwnck-1.so.22 is needed by xfdesktop-4.12.0-0.arm
+			libxfce4ui-1.so.0 is needed by xfdesktop-4.12.0-0.arm
+46. gtksourceview-2.10.5 :
+		error: Failed dependencies:
+			libcairo.so.2 is needed by gtksourceview-2.10.5-0.arm
+			libgdk-x11-2.0.so.0 is needed by gtksourceview-2.10.5-0.arm
+			libgdk_pixbuf-2.0.so.0 is needed by gtksourceview-2.10.5-0.arm
+			libgtk-x11-2.0.so.0 is needed by gtksourceview-2.10.5-0.arm
+			libpango-1.0.so.0 is needed by gtksourceview-2.10.5-0.arm
+			libpangocairo-1.0.so.0 is needed by gtksourceview-2.10.5-0.arm
+			libpangoft2-1.0.so.0 is needed by gtksourceview-2.10.5-0.arm
+47. xfce-mcs-manager-4.4.2 :
+		error: Failed dependencies:
+			libcairo.so.2 is needed by xfce-mcs-manager-4.4.2-0.arm
+			libgdk-x11-2.0.so.0 is needed by xfce-mcs-manager-4.4.2-0.arm
+			libgdk_pixbuf-2.0.so.0 is needed by xfce-mcs-manager-4.4.2-0.arm
+			libgtk-x11-2.0.so.0 is needed by xfce-mcs-manager-4.4.2-0.arm
+			libpango-1.0.so.0 is needed by xfce-mcs-manager-4.4.2-0.arm
+			libpangocairo-1.0.so.0 is needed by xfce-mcs-manager-4.4.2-0.arm
+			libpangoft2-1.0.so.0 is needed by xfce-mcs-manager-4.4.2-0.arm
+			libxfcegui4.so.4 is needed by xfce-mcs-manager-4.4.2-0.arm
+--------------------------------------delete libiconv..
+48. bash-4.3.30 :
+		error: Failed dependencies:
+			libtermcap.so.2 is needed by bash-4.3.30-1.arm
+49. lcms2-2.5 :
+		error: Failed dependencies:
+			libtiff.so.3 is needed by lcms2-2.5-1.arm
+50. openjpeg-1.5.1 : 
+		error: Failed dependencies:
+			liblcms2.so.2 is needed by openjpeg-1.5.1-1.arm
+			libtiff.so.3 is needed by openjpeg-1.5.1-1.arm
+51. Linux-PAM-1.1.8 :
+		error: Failed dependencies:
+			libcrack.so.2 is needed by Linux-PAM-1.1.8-1.arm
+			libdb-4.8.so is needed by Linux-PAM-1.1.8-1.arm
+			libdb-4.8.so(DB4_8) is needed by Linux-PAM-1.1.8-1.arm
+52. polkit-0.112 :
+		error: Failed dependencies:
+			libpam.so.0 is needed by polkit-0.112-1.arm
+			libpam.so.0(LIBPAM_1.0) is needed by polkit-0.112-1.arm
+53. keybinder-0.3.0 :
+		error: Failed dependencies:
+			libcairo.so.2 is needed by keybinder-0.3.0-0.arm
+			libgdk-x11-2.0.so.0 is needed by keybinder-0.3.0-0.arm
+			libgdk_pixbuf-2.0.so.0 is needed by keybinder-0.3.0-0.arm
+			libgtk-x11-2.0.so.0 is needed by keybinder-0.3.0-0.arm
+			libpango-1.0.so.0 is needed by keybinder-0.3.0-0.arm
+			libpangocairo-1.0.so.0 is needed by keybinder-0.3.0-0.arm
+			libpangoft2-1.0.so.0 is needed by keybinder-0.3.0-0.arm
+54. libunique-1.1.6 :
+		error: ../unique/uniquemessage.h:51:1: error: unknown type name 'G_CONST_RETURN'
+cancel building xfce4
+55. firefox-22.0 :
+		../libjs_static.a(LinearScan.o): In function `js::ion::LinearScanAllocator::go()':
+/home/rtx-3110/Work/Project/Linux/PITX/MX6_LinuxBSP/out/rpm/BUILD/firefox-22.0/js/src/ion/LinearScan.cpp:1141: ???????js::ion::LiveRangeAllocator<js::ion::LinearScanVirtualRegister>::buildLivenessInfo()?
+
+56. MPlayer-1.1.1 :
+		libavcodec/libvpxenc.c:81:6: error: 'VP8E_UPD_ENTROPY' undeclared here (not in a function)
+     [VP8E_UPD_ENTROPY]           = "VP8E_UPD_ENTROPY",
+57. freeimage-3.15.4 :
+		make[1]: *** [Source/OpenEXR/./IlmImf/ImfHuf.o] Error 1
+		make[1]: *** Waiting for unfinished jobs....
+58. ois-1.3.0 :
+		./linux/LinuxForceFeedback.cpp:102:44: error: 'write' was not declared in this scope
+ 		 if (write(mJoyStick, &event, sizeof(event)) != sizeof(event)) {
+59. firmware-imx-3.14.28-1 :
+		can't find spec file for firmware-imx-3.14.28
+
+
+
+
+		Answer : Ad "Autoreqprov     : no" to spec

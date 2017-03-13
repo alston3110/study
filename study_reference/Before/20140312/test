@@ -1,0 +1,32 @@
+1) 修改 /etc/X11/xorg.conf, 我自己是改成這樣
+
+Section "Screen"
+        Identifier      "Default Screen"
+        Monitor         "Configured Monitor"
+        Device          "Configured Video Device"
+        SubSection      "Dispaly"
+        Depth           24
+        Modes           "1024x768"
+        Virtual         2560 2560
+        EndSubSection
+EndSection
+
+(2) 安裝 grandr 這支程式, 就可以設定延伸桌面囉 ~~~~~~
+
+
+
+1. 修改 /etc/X11/xorg.conf
+
+Section "Screen"
+        Identifier "Default Screen"
+        Monitor "Configured Monitor"
+        Device "Configured Video Device"
+        SubSection "Dispaly"
+        Depth 24
+        Modes "1024x768"
+        Virtual 2560 2560
+        EndSubSection
+EndSection
+
+2. 安裝 grandr或 xrandr 這支程式, 就可以設定延伸桌面了。
+

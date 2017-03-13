@@ -1,0 +1,154 @@
+Kernel Issue Solution,
+//##############################################################//
+//			Compiler 				//
+//##############################################################//
+
+
+
+
+
+
+
+
+
+
+
+
+//##############################################################//
+//			RUN : RUN				//
+//##############################################################//
+kernel 3.10.31
+===============================Isuue(Bishop ramdisk)============================================
+1. VFP support v0.3: implementor 41 architecture 3 part 30 variant c rev 2
+	Unable to handle kernel paging request at virtual address f51a000c
+	=> menuconfig 關掉VFP : 				//(無效)
+	=> 換 	CROSS_COMPILE=/usr/bin/arm-linux-gnueabi-	//(無效)
+		CROSS_COMPILE=/opt/freescale/usr/local/gcc-4.6.2-glibc-2.13-linaro-multilib-2011.12/fsl-linaro-toolchain/bin/arm-fsl-linux-gnueabi-
+	=> menuconfig open kernel debug info			//(未試)
+	=> 修改 arch/arm/mach-imx/hardware.h			//(crach - mx5_cpu_lp_set - print - arch/arm/mach-imx/hardware.h - IMX_IO_P2V)
+
+2. ehci_hcd: USB 2.0 'Enhanced' Host Controller (EHCI) Driver
+	usbcore: registered new interface driver usb-storage
+	imx_usb 53f80000.usb: Failed to get clock, err=-2
+	imx_usb: probe of 53f80000.usb failed with error -2
+	=> USB 無反應
+	=> USB support	=> <*> Support for Freescale i.MX on-chip EHCI USB controller	(無效)
+			=> <*> Generic EHCI driver for z platform device		(無效)
+			=> <*> USB Serial Converter support				(無效)
+	=> Hardware Monitoring support	=> <*> Dialog DA9052/DA9053 ADC			(無效)
+	=> HID support	=> USB HID support	=> /dev/hiddev raw HID device support	(無效)
+
+	=>3.15.6 (rtx-bishop-mx53.dts + imx53.dtsi ) -> 3.10.31
+		=> platform 53f80000.usb: Driver imx_usb requests probe deferral (drivers/base/dd.c)
+	=> USB Physical Layer drivers  --->
+		<*> NOP USB Transceiver Drive		(新增)
+		<*> OMAP CONTROL USB Driver		(新增)
+		<*> Freescale MXS USB PHY support	
+		[*] Generic ULPI Transceiver Driver	(新增)
+	=> OK
+
+3. iptable 參數 config 設定. (其他參數還要再試)
+	Core Netfilter Configuration  --->
+		<*> Netfilter connection tracking support
+		<*>   Connection tracking netlink interface
+		<*>   "conntrack" connection tracking match support
+	IP: Netfilter Configuration  --->
+		<*> IPv4 connection tracking support (required for NAT)
+		<*> IP tables support (required for filtering/masq/NAT)
+		<*>   Packet filtering
+		<*>     REJECT target support
+		<*>   IPv4 NAT
+		<*>     MASQUERADE target support
+
+4. Bluetooth kernel config setting
+	<*>   Bluetooth subsystem support  --->
+		<*>   RFCOMM protocol support
+		[*]     RFCOMM TTY support
+		<*>   BNEP protocol support
+		[*]     Multicast filter support
+		[*]     Protocol filter support
+		<*>   HIDP protocol support
+			Bluetooth device drivers  --->
+				<*> HCI USB driver
+				<*> HCI UART driver
+				[*]   UART (H4) protocol support
+				[*]   BCSP protocol support
+				[*]   Atheros AR300x serial support
+				[*]   HCILL protocol support
+				[*]   Three-wire UART (H5) protocol support
+				<*> HCI VHCI (Virtual HCI device) driver
+	<*>   RF switch subsystem support  --->
+		--- RF switch subsystem support 
+			[*]   RF switch input support 
+ 			<*>   Generic rfkill regulator driver    
+ 			<*>   GPIO RFKILL driver
+
+5. RTC driver
+	Kconfig -> add
+		config RTC_DRV_DS1302
+			tristate "Dallas DS1302"
+			help
+	  		If you say yes here you get support for the Dallas DS1302 RTC chips.
+	Makefile -> 
+		obj-$(CONFIG_RTC_DRV_DS1302)	+= rtc-ds1302.o
+
+	Device Drivers  ---> 
+		 [*] Real Time Clock  --->
+			[*]   /sys/class/rtc/rtcN (sysfs)
+			[*]   /proc/driver/rtc (procfs for rtcN)
+			[*]   /dev/rtcN (character devices)
+			<*>   Dallas DS1302
+
+	ds1302: gpiortc@53f90000 {
+		compatible = "fsl,rtc-ds1302-gpio";
+		pinctrl-names = "default";
+		gpio-controller;
+		interrupt-controller;
+	};
+	&ds1302 {
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_ds1302>;	
+		status = "okay";
+	};
+
+	rtc-ds1302.c 程式 (rtc-ds1302-gpio, for GPIO設計)
+	chcek (rtc-lib.c/ interface.c/ hctosys.c/
+	
+6. 3G module
+	[*] USB support  --->
+		<*>     EHCI HCD (USB 2.0) support
+		<*>   USB Serial Converter support  --->
+			[*]   USB Generic Serial Driver
+			<*>   USB Qualcomm Auxiliary Serial Port Driver
+			<*>   USB Qualcomm Serial modem 
+			<*>   USB driver for GSM and CDMA modems
+
+7. GPIO 
+	.dts
+		&ds1302 {
+			pinctrl-names = "default";	
+			gpio-cs = <&gpio4 12 0>;
+			gpio-clk = <&gpio4 5 0>;
+			gpio-txd = <&gpio4 14 0>;
+			status = "okay";
+		};
+	driver
+		struct device_node *np = pdev->dev.of_node;
+		gpio_cs = of_get_named_gpio(np, "gpio-cs", 0);
+		gpio_clk = of_get_named_gpio(np, "gpio-clk", 0);
+		gpio_txd = of_get_named_gpio(np, "gpio-txd", 0);
+
+
+
+
+
+
+kernel 3.15.6
+===============================Isuue(Bishop ubuntu)============================================
+1. imx-sdma 63fb0000.sdma: firmware not found
+	random: nonblocking pool is initialized
+	=> General setup  ---> [*] open by fhandle syscalls 	//(無效)
+	=> 更換 file system 就OK了.
+	=> 再觀察,此訊息與問題無相關性,還是可開機完成.
+
+

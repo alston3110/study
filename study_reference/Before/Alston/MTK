@@ -1,0 +1,10 @@
+MCS : Arduino SDK
+1. COM port Driver : C:\Program Files (x86)\Arduino  去找.
+2. Build 後的檔案存放位置 :  ***.vxp
+	C:\Users\1726\AppData\Local\Temp\build4408400210654869422.tmp
+3. Build error : add correct Board, add lib  HttpClient-2.2.0
+4. cp ***.vxp to usb-disk  
+
+
+
+Eclipse:

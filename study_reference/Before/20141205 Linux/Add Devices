@@ -1,0 +1,65 @@
+==========================================Device add ===============================================
+PCIE WIFI : (Intel)
+	a. open kernel config : Kernel Configuration - System Type -> Freescale MXC Implementation -> PCI Express Support
+				Kernel Configuration - Networking support -> Wireless -> Generic IEEE 802.11 Networking Stack (mac82011)
+				Kernel Configuration - Device Drivers -> Network device support -> wireless Lan -> Intel Wireless WiFi Next Gen AGN-Wireless-N/Advanced-N/Ultimate-N (iwlagn)
+	b. Driver : /lib/firmware/iwlwifi-6000g2a-5.ucode
+
+USB WIFI : (RT2870STA)
+	a. insmod rt5370sta.ko
+	b. copy RT2870STA.dat -> /etc/Wireless/RT2870STA/.
+
+USB OTG :	
+	a. open Kernel config : Kernel Configuration - Device Drivers -> USB support -> USB Gadget Support -> File-backed Storage Gadget
+				Kernel Configuration - Device Drivers -> USB support -> USB OTG pin detect support
+	b. Driver : insmode g-serial.ko (OTG serial function)
+	c. insmod /lib/modules/3.0.35/kernel/drivers/usb/gadget/g_file_storage.ko file=/dev/sda stall=0 removable=1
+
+GPIO :
+	a. open kernel config : Kernel Configuration - Device Drivers -> GPIO support -> /sys/class/gpio... (sysfs interface)
+	b. gpio_free
+
+X11(Xorg) :	Debug
+	a. DISPLAY=:0.0
+	b. startsx
+	c. ps -A
+
+WIFI : 啟動程序	(RT2870STA)(IMX53 - Q7)
+	a. iwconfig (確定device存在)
+	b. insmod /lib/modules/2.6.35.3+/kernel/drivers/net/wireless/rt5370.ko (lsmod check)
+	c. ifconfig wlan0 up (喚醒wlan0)
+	d. /usr/sbin/wpa_supplicant -iwlan0 -c/etc/wpa_supplicant.conf&(啟動interface & id / password)
+	e. udhcpc -i wlan0&
+	f. 也可直接設定wpa_supplicant.conf (ssid/ psk/ proto/ key_mgmt(WEP:NONE/ WPA:WPA-PSK))
+	g. 可使用iwlist scan -> 先確定要連的AP
+
+Xfce4 : Install
+	a. pkgs : xrdb-1.0.3/ gtk-xfce-engine-2.8.0/ libxfcegui4-4.8.0/ xfce4-appfinder-4.8.0/ xfce4-dev-tools-4.8.0/
+		garcon-0.2.0/ xfce4-panel-4.8.0/ xfce4-session-4.8.0/ xfce4-setting-4.8.0/ xfdesktop-4.8.0/ libwnck-2.22.3/
+		xfwm4-4.8.0/ xfconf-4.8.0/ libxfce4ui-4.8.0/ libxfce4util-4.8.1/ xfce-utils-4.8.0/ exo-0.6.0/ thunar-1.2.0/
+		thunar-vfs-1.2.0/ (Update - glib2-2.36.0)/ （如無法啟動xfec4 - Rebuild - dbus-glib)
+	b. .xinitrc (config/platform/imx/merge/root/.xinitrc)
+		exec startxfce4
+		exec xterm -u8
+
+CAN bus : Start/ Send/ Receive	(IMX6)
+	a. canconfig can0 bitrate 500000 
+	b. ifconfig can0 up
+	c. ifconfig
+	d. cansend can0 -i0x100 11 22 33 44	(Send)
+	e. ip -det -stat link show can0
+	f. candump can0		(Receive)
+	g. cansend can0 123#AABBCCDD (Send : can0 123 [4] AA BB CC DD)
+
+CAN bus : (IMX5)
+	a. echo 500000 > /sys/devices/platform/FlexCAN.0/bitrate
+	b. ifconfig can0 up
+	c. cansend can0 -i0x100 11 22 33 44	(Send)
+	d. candump can0		(Receive)
+
+mmcblk0boot0/mmcblk0boot1 : (Wrapping_Machine) remove
+	a. kernel/drivers/mmc/card/block.c -> mmc_blk_probe(struct mmc_card *card)
+		//if (mmc_blk_alloc_parts(card, md))
+		//	goto out;
+
+

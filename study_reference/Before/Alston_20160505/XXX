@@ -1,0 +1,24 @@
+#!/bin/sh
+
+echo "$0 $1 $2 $3" > /proc/sys/kernel/printk
+func_RTX() {
+			case "$1" in
+			brightness)
+				xrandr --output HDMI1 --brightness $2
+				xrandr --output HDMI2 --brightness $2
+				exit 0
+				;;
+			gamma)	
+				xrandr --output DVI-0 --gamma 2:2:1
+				xrandr --output DVI-0 --gamma 2:2:1
+				exit 0
+				;;
+			suspend)
+				sudo pm-suspend
+				exit 0
+				;;
+			esac
+			;;
+}
+func_RTX
+

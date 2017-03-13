@@ -1,0 +1,48 @@
+int i2c_read_mcu(uchar chip, uchar* addr, int alen, uchar *buf, int len)
+{
+	int timeout = I2C_MAX_TIMEOUT;
+	uint ret;
+
+	DPRINTF("%s chip: 0x%02x addr: 0x%04x alen: %d len: %d\n",
+		__func__, chip, addr, alen, len);
+
+	if (i2c_addr_mcu(chip, addr, alen)) {
+		printf("i2c_addr failed\n");
+		return -1;
+	}
+
+	__REG16(I2C_BASE + I2CR) = I2CR_IEN | I2CR_MSTA | I2CR_MTX | I2CR_RSTA;
+
+	if (tx_byte(chip << 1 | 1) ||
+	    (__REG16(I2C_BASE + I2SR) & I2SR_RX_NO_AK)) {
+		printf("%s:Send 2th chip address fail(%x)\n",
+		       __func__, __REG16(I2C_BASE + I2SR));
+		return -1;
+	}
+	__REG16(I2C_BASE + I2CR) = I2CR_IEN | I2CR_MSTA |
+	    ((len == 1) ? I2CR_TX_NO_AK : 0);
+	DPRINTF("CR=%x\n", __REG16(I2C_BASE + I2CR));
+	ret = __REG16(I2C_BASE + I2DR);
+
+	while (len--) {
+		if (len == 0)
+			__REG16(I2C_BASE + I2CR) = I2CR_IEN | I2CR_MSTA |
+			    I2CR_TX_NO_AK;
+
+		if (rx_byte(&ret, len == 0) < 0) {
+			printf("Read: rx_byte fail\n");
+			return -1;
+		}
+		*buf++ = ret;
+	}
+
+	while (__REG16(I2C_BASE + I2SR) & I2SR_IBB && --timeout) {
+		__REG16(I2C_BASE + I2SR) = 0;
+		udelay(I2C_TIMEOUT_TICKET);
+	}
+	if (!timeout) {
+		printf("%s:trigger stop fail(%x)\n",
+		       __func__, __REG16(I2C_BASE + I2SR));
+	}
+	return 0;
+}

@@ -1,0 +1,33 @@
+==========================================Device add ===============================================
+PCIE WIFI : (Intel)
+	a. open kernel config : Kernel Configuration - System Type -> Freescale MXC Implementation -> PCI Express Support
+				Kernel Configuration - Networking support -> Wireless -> Generic IEEE 802.11 Networking Stack (mac82011)
+				Kernel Configuration - Device Drivers -> Network device support -> wireless Lan -> Intel Wireless WiFi Next Gen AGN-Wireless-N/Advanced-N/Ultimate-N (iwlagn)
+	b. Driver : /lib/firmware/iwlwifi-6000g2a-5.ucode
+
+USB WIFI : (RT2870STA)
+	a. insmod rt5370sta.ko
+	b. copy RT2870STA.dat -> /etc/Wireless/RT2870STA/.
+
+USB OTG :	
+	a. open Kernel config : Kernel Configuration - Device Drivers -> USB support -> USB Gadget Support -> File-backed Storage Gadget
+				Kernel Configuration - Device Drivers -> USB support -> USB OTG pin detect support
+	b. Driver : insmode g-serial.ko (OTG serial function)
+	c. insmod /lib/modules/3.0.35/kernel/drivers/usb/gadget/g_file_storage.ko file=/dev/sda stall=0 removable=1
+
+GPIO :
+	a. open kernel config : Kernel Configuration - Device Drivers -> GPIO support -> /sys/class/gpio... (sysfs interface)
+	b. gpio_free
+
+X11(Xorg) :	Debug
+	a. DISPLAY=:0.0
+	b. startsx
+	c. ps -A
+
+WIFI : 啟動程序	(RT2870STA)(IMX53 - Q7)
+	a. iwconfig (確定device存在)
+	b. insmod /lib/modules/2.6.35.3+/kernel/drivers/net/wireless/rt5370.ko (lsmod check)
+	c. ifconfig wlan0 up (喚醒wlan0)
+	d. /usr/sbin/wpa_supplicant -iwlan0 -c/etc/wpa_supplicant.conf&(啟動interface & id / password)
+	e. udhcpc -i wlan0&
+

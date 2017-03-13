@@ -1,0 +1,19 @@
+相關RELEASE細節.
+
+2014/11/12 : 日本橫濱Demo使用
+Q7 imx6 Qual (ubuntu-12.04-destop-base-gpu-gst.tar.bz2)
+	1. kernel/u-boot (使用之前 Ibase Q7 的source) MX6_LinuxBSP : Ibase-Q7(2014-08-07) => Change TEMPERATURE_HOT (80 -> 105)
+	2. file system : ubuntu-12.04-destop-base-gpu-gst.tar.bz2
+	3. SD卡開機, rm mmcblk0p1 資料, 將file system 直接tar入
+	4. 修改uboot參數, 使HDMI輸出
+	5. 修改 auto login ( 使用者直接登入)
+	6. 可以播放content (avi, mp4)
+	7. add script : 
+		#!/bin/sh
+		sudo gst-launch filesrc location=/home/rtx/001.MP4 typefind=true ! aiurdemux name=demux demux. ! queue max-size-buffers=0 max-size-time=0 ! vpudec ! mfw_v4lsink demux. ! queue max-size-buffers=0 max-size-time=0 ! beepdec ! audioconvert ! 'audio/x-raw-int, channels=2' ! alsasink device='hw:1,0'
+	8. 增加root權限, 或 sudo 不用passwd (使可以直接點icon,播放影片)
+	9. sudo visudo => 為rtx使用者 => rtx ALL = NOPASSWD: ALL
+	10. 確定影像 聲音 輸出正常.
+
+
+

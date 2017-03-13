@@ -1,0 +1,214 @@
+
+20141114 - BISHOP(uboot2014+ kernel-3.10.31+ ubuntu) - for GateWay
+【A】 建立 html 網頁 , 提供給使用者設定『 Config 』
+	首先為平台先更新一下： 	apt-get update
+				apt-get install udhcpd
+				//apt-get install dhcp3-server
+
+	1. eth0 - 設定AP,給USER連接.
+		設定dhcp 給定IP
+
+
+	2. wifi - 設定AP,給USER連接. (wifi.sh)
+		(1) 喚醒wifi device
+			(csr pkgs 要先複製到系統)
+			insmod /lib/modules/3.10.31+/kernel/drivers/staging/csr/csr_helper.ko
+			insmod /lib/modules/3.10.31+/kernel/drivers/staging/csr/csr_wifi.ko
+			ifconfig eth1 up
+		(2) 設定udhcpd
+			a. /etc/udhcpd.conf
+				修改	interface	eth1
+					router		192.168.0.10
+			b. ifconfig eth1 up
+			c. ifconfig eth1 192.168.0.10 netmask 255.255.255.0
+			d. udhcpd /etc/udhcpd.conf
+			e. pc : ipconfig (插拔network cable)
+			(Kernel : ip Netfilter - iptable)
+
+		(3) 相關設定,啟動server
+			echo 0 > /proc/sys/net/ipv4/ip_forward	
+			iptables -t nat -A POSTROUTING -o eth0 -j MASQUERADE	
+			iptables -A FORWARD -i eth0 -o eth1 (不下-m state --state RELATED,ESTABLISHED) -j ACCEPT	
+			iptables -A FORWARD -i eth1 -o eth0 -j ACCEPT	
+			echo 1 > /proc/sys/net/ipv4/ip_forward	
+			ifconfig eth1 192.168.0.10
+			udhcpd
+
+		(4) 開啟AP
+			iwpriv eth1 AP_SET_CFG ASCII_CMD=AP_CFG,SSID="Bishop-AP-3110",SEC="open",KEY=0,CHANNEL=1,PREAMBLE=0,MAX_SCB=8,END
+			iwpriv eth1 AP_BSS_START
+
+	3. pc connect - connect to network
+		無線區域網路介面卡 無線網路連線:
+   		連線特定 DNS 尾碼 . . . . . . . . : local
+   		連結-本機 IPv6 位址 . . . . . . . : fe80::d523:7abb:e24b:f604%12
+   		IPv4 位址 . . . . . . . . . . . . : 192.168.0.20
+   		子網路遮罩 . . . . . . . . . . . .: 255.255.255.0
+   		預設閘道 . . . . . . . . . . . . .: 192.168.0.10
+
+	4. home page - (apache pkgs)
+		apt-get install apache2
+		/etc/init.d/apache2 start | stop | restart
+
+		netstat -anutp
+		Active Internet connections (servers and established)
+		Proto Recv-Q Send-Q Local Address           Foreign Address         State       PID/Program name
+		tcp        0      0 0.0.0.0:80              0.0.0.0:*               LISTEN      1405/apache2
+		tcp        0      0 0.0.0.0:22              0.0.0.0:*               LISTEN      414/sshd
+
+		ps. No such file or directory: apache2: could not open error log file /var/log/apache2/error.log.
+			=> mkdir -p /var/log/apache2
+
+	5. httpd 設定 -
+		/etc/init.d/apache2 start	(Start)
+		echo "ServerName ubuntu.mydomain.com" >> /etc/apache2/httpd.conf
+		hostname ubuntu.mydomain.com
+		echo "192.168.0.10    ubuntu.mydomain.com" >> /etc/hosts
+
+	6. http://192.168.0.10/index.html	->	It works!!
+
+	7. /var/www/index.html -
+		write GateWay.html
+		write test.html - ok
+
+	8. apt-get install php5 (php語法需要)
+		http://192.168.0.10/rtx/index.php	-> It works!!
+		host ap : energyd-arm (demon)
+
+	9. apache2 開啟 網站USER/PASSWORD
+		a. 確定虛擬主機 位置	sudo nano /etc/apache2/sites-available/default
+			(1) 	Options Indexes FollowSymLinks MultiViews (Indexes : 若無index相關檔案,會顯示目錄,一般移除)
+                		AllowOverride All
+			(2)	Directory /var/www/v001/	
+		b. 建立需要帳號 及密碼
+			htpasswd -c .htpasswd user (建立 user 帳號及 輸入密碼) 
+		c. 若要變更密碼 變更passwd
+			htpasswd .htpasswd user
+		d. 目前.htpasswd 放置再 /etc/apache2 中
+		e. sudo service apache2 restart
+		f. .htaccess 為需要輸入密碼的folder
+			/var/www/v001/.htaccess	(配合 config)
+
+【B】開始HTML相關網頁的建構 (v001)及流程
+	1. ipcs : check Shared Memory Segments
+	V001 (HTML) : index.php
+			lan.php
+			
+-------internet網路 port:12345 --> socket (buf) --------
+			
+			energyd-arm (demon)
+
+-------shared memory ----->linux -> shm ----------------
+
+			proc2 (demon)
+
+-------------------------ioctl--------------------------
+
+			information
+
+【C】Apache listen multiple port (80, 8080 port)
+	1. /etc/apache2/ports.conf
+		NameVirtualHost *:80
+		NameVirtualHost *:8080
+		Listen 80
+		Listen 8080
+	2. /etc/apache2/sites-available/default
+		<VirtualHost *:80>
+			---
+		</VirtualHost>
+		<VirtualHost *:8080>
+			---
+		</VirtualHost>
+	3. sudo service apache2 restart
+	4. netstat -lntp
+
+【D】SSL Certificate (https)
+	1. a2enmod ssl
+	2. service apache2 restart
+	3. mkdir /etc/apache2/ssl	(放憑證的資料夾)
+	4. openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout /etc/apache2/ssl/apache.key -out /etc/apache2/ssl/apache.crt
+	5. 
+		Country Name (2 letter code) [AU]:US
+		State or Province Name (full name) [Some-State]:NewYork
+		Locality Name (eg, city) []:NYC
+		Organization Name (eg, company) [Internet Widgits Pty Ltd]:Awesome Inc
+		Organizational Unit Name (eg, section) []:Dept of Merriment
+		Common Name (e.g. server FQDN or YOUR name) []:example.com
+		Email Address []:webmaster@awesomeinc.com
+	6. nano /etc/apache2/sites-available/default-ssl (編輯檔案)
+		ServerName example.com:443
+		SSLEngine on
+		SSLCertificateFile /etc/apache2/ssl/apache.crt
+		SSLCertificateKeyFile /etc/apache2/ssl/apache.key
+	7. a2ensite default-ssl
+	8. service apache2 reload
+	9. https://192.168.11.5  (可以進入folder)
+【E】增加虛擬主機
+	1. /etc/apache2/sites-available/name3110 新增虛擬主機
+		<VirtualHost *:3110>
+        	serverName  alston.example.com
+        	ServerAdmin alston@mail.example.com
+        	DocumentRoot /var/www/alston/
+	2. sudo a2ensite name3110  增加一軟鏈接文件 
+		/etc/apache2/sites-enabled/name3110
+	3. /etc/apache2/ports.conf 增加 port
+		NameVirtualHost *:3110
+		Listen 3110
+	4. sudo apache2 restart
+
+======================================================
+
+20141203 : php sqlite
+  phpinfo() : 	PHP version 5.3.10-ubuntu3.15
+		Apache 2.0 Handler
+		Configuration File (php.ini) Path  :	/etc/php5/apache2 
+		Loaded Configuration File	   :	/etc/php5/apache2/php.ini 
+		Additional .ini files parsed 	   :	/etc/php5/apache2/conf.d/pdo.ini
+							/etc/php5/apache2/conf.d/pdo_sqlite.ini
+							/etc/php5/apache2/conf.d/sqlite3.ini 
+		PDO support => PDO drivers 	   :	sqlite 
+		PDO Driver for SQLite 3.x => SQLite Library	:	3.7.9 	
+		
+	1. apt-get install sqlite	==> SQLite version 2.8.17
+	2. apt-get install sqlite3	==> SQLite version 3.7.9
+	3. apt-get install php5-sqlite	==> pdo_sqlite.so
+
+	---------------------------------------------------
+	1. sqlite3 mydb.sq3 (server 在/opt/databases下,建立mydb.sq3 database)
+	2. .php file 開啟 	new PDO('sqlite:/opt/databases/mydb.sq3');
+				new SQLite3('/opt/databases/mydb.sq3');
+		PDO::query
+		PDO::exec
+
+	3. CREATE TABLE COMPANY(
+  			ID INT PRIMARY KEY     NOT NULL,
+  			NAME           TEXT    NOT NULL,
+   			AGE            INT     NOT NULL,
+   			ADDRESS        CHAR(50),
+   			SALARY         REAL
+			);
+	4. 	INSERT INTO COMPANY (ID,NAME,AGE,ADDRESS,SALARY)
+		VALUES (1, 'Paul', 32, 'California', 20000.00 );
+		INSERT INTO COMPANY (ID,NAME,AGE,ADDRESS,SALARY)
+		VALUES (2, 'Allen', 25, 'Texas', 15000.00 );
+		INSERT INTO COMPANY (ID,NAME,AGE,ADDRESS,SALARY)
+		VALUES (3, 'Teddy', 23, 'Norway', 20000.00 );
+		INSERT INTO COMPANY (ID,NAME,AGE,ADDRESS,SALARY)
+		VALUES (4, 'Mark', 25, 'Rich-Mond ', 65000.00 );
+		INSERT INTO COMPANY (ID,NAME,AGE,ADDRESS,SALARY)
+		VALUES (5, 'David', 27, 'Texas', 85000.00 );
+		INSERT INTO COMPANY (ID,NAME,AGE,ADDRESS,SALARY)
+		VALUES (6, 'Kim', 22, 'South-Hall', 45000.00 );
+		INSERT INTO COMPANY VALUES (7, 'James', 24, 'Houston', 10000.00 );
+
+	5. 顯示COMPANY 內容
+		sqlite>.header on
+		sqlite>.mode column
+		sqlite> SELECT * FROM INFO;
+
+	6. sqlite3 指令集
+		.schema 	: table 架構
+	   	.table  	: table name
+	   	.databases
+	   
+

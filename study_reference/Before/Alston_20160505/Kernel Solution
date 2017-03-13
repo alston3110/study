@@ -1,0 +1,242 @@
+Kernel Issue Solution,
+//##############################################################//
+//			Compiler 				//
+//##############################################################//
+kernel 3.0.35	!
+
+Intel PCIE Wifi :
+	System Type  ---> 
+		Freescale MXC Implementations  ---> 
+			[*] PCI Express support 
+	Bus support  ---> 
+		[*] PCI Express support 
+	[*] Networking support  ---> -*-   
+		Wireless  ---> 	
+			<*>   cfg80211 - wireless configuration API 
+			<*>   Generic IEEE 802.11 Networking Stack (mac80211)
+			[*]     cfg80211 wireless extensions compatibility 
+	Device Drivers  ---> 
+			[*] Network device support  ---> 
+				[*]   Wireless LAN  ---> 
+					<*>   Intel Wireless WiFi Next Gen AGN - Wireless-N/Advanced-N/Ultimate-N (iwlagn)
+	Device Drivers ->
+                Generic Driver Options ->
+                        Userspace firmware loading support
+	複製 iwlwifi-6000g2a-5.ucode 到 /lib/firmware裡
+	Check wireless driver: pci  => /sys/bus/pci/drivers/iwlagn
+
+rt5370sta : 需要重新compile
+	[*] Networking support  ---> -*-   Wireless  ---> <*>   Generic IEEE 802.11 Networking Stack (mac80211)
+	Device Drivers  --->	
+	 	[*] Network device support  ---> 
+	 		[*]   Wireless LAN  ---> 
+	 			<*>   IEEE 802.11 for Host AP (Prism2/2.5/3 and WEP/TKIP/CCMP)
+	 			[*]     Support downloading firmware images with Host AP driver
+
+//##############################################################//
+//			RUN : RUN				//
+//##############################################################//
+kernel 3.10.31
+===============================Isuue(Bishop ramdisk)============================================
+1. VFP support v0.3: implementor 41 architecture 3 part 30 variant c rev 2
+	Unable to handle kernel paging request at virtual address f51a000c
+	=> menuconfig 關掉VFP : 				//(無效)
+	=> 換 	CROSS_COMPILE=/usr/bin/arm-linux-gnueabi-	//(無效)
+		CROSS_COMPILE=/opt/freescale/usr/local/gcc-4.6.2-glibc-2.13-linaro-multilib-2011.12/fsl-linaro-toolchain/bin/arm-fsl-linux-gnueabi-
+	=> menuconfig open kernel debug info			//(未試)
+	=> 修改 arch/arm/mach-imx/hardware.h			//(crach - mx5_cpu_lp_set - print - arch/arm/mach-imx/hardware.h - IMX_IO_P2V)
+
+2. ehci_hcd: USB 2.0 'Enhanced' Host Controller (EHCI) Driver
+	usbcore: registered new interface driver usb-storage
+	imx_usb 53f80000.usb: Failed to get clock, err=-2
+	imx_usb: probe of 53f80000.usb failed with error -2
+	=> USB 無反應
+	=> USB support	=> <*> Support for Freescale i.MX on-chip EHCI USB controller	(無效)
+			=> <*> Generic EHCI driver for z platform device		(無效)
+			=> <*> USB Serial Converter support				(無效)
+	=> Hardware Monitoring support	=> <*> Dialog DA9052/DA9053 ADC			(無效)
+	=> HID support	=> USB HID support	=> /dev/hiddev raw HID device support	(無效)
+
+	=>3.15.6 (rtx-bishop-mx53.dts + imx53.dtsi ) -> 3.10.31
+		=> platform 53f80000.usb: Driver imx_usb requests probe deferral (drivers/base/dd.c)
+	=> USB Physical Layer drivers  --->
+		<*> NOP USB Transceiver Drive		(新增)
+		<*> OMAP CONTROL USB Driver		(新增)
+		<*> Freescale MXS USB PHY support	
+		[*] Generic ULPI Transceiver Driver	(新增)
+	=> OK
+
+3. iptable 參數 config 設定. (其他參數還要再試)
+	Core Netfilter Configuration  --->
+		<*> Netfilter connection tracking support
+		<*>   Connection tracking netlink interface
+		<*>   "conntrack" connection tracking match support
+	IP: Netfilter Configuration  --->
+		<*> IPv4 connection tracking support (required for NAT)
+		<*> IP tables support (required for filtering/masq/NAT)
+		<*>   Packet filtering
+		<*>     REJECT target support
+		<*>   IPv4 NAT
+		<*>     MASQUERADE target support
+
+4. Bluetooth kernel config setting
+	<*>   Bluetooth subsystem support  --->
+		<*>   RFCOMM protocol support
+		[*]     RFCOMM TTY support
+		<*>   BNEP protocol support
+		[*]     Multicast filter support
+		[*]     Protocol filter support
+		<*>   HIDP protocol support
+			Bluetooth device drivers  --->
+				<*> HCI USB driver
+				<*> HCI UART driver
+				[*]   UART (H4) protocol support
+				[*]   BCSP protocol support
+				[*]   Atheros AR300x serial support
+				[*]   HCILL protocol support
+				[*]   Three-wire UART (H5) protocol support
+				<*> HCI VHCI (Virtual HCI device) driver
+	<*>   RF switch subsystem support  --->
+		--- RF switch subsystem support 
+			[*]   RF switch input support 
+ 			<*>   Generic rfkill regulator driver    
+ 			<*>   GPIO RFKILL driver
+
+5. RTC driver
+	Kconfig -> add
+		config RTC_DRV_DS1302
+			tristate "Dallas DS1302"
+			help
+	  		If you say yes here you get support for the Dallas DS1302 RTC chips.
+	Makefile -> 
+		obj-$(CONFIG_RTC_DRV_DS1302)	+= rtc-ds1302.o
+
+	Device Drivers  ---> 
+		 [*] Real Time Clock  --->
+			[*]   /sys/class/rtc/rtcN (sysfs)
+			[*]   /proc/driver/rtc (procfs for rtcN)
+			[*]   /dev/rtcN (character devices)
+			<*>   Dallas DS1302
+
+	ds1302: gpiortc@53f90000 {
+		compatible = "fsl,rtc-ds1302-gpio";
+		pinctrl-names = "default";
+		gpio-controller;
+		interrupt-controller;
+	};
+	&ds1302 {
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_ds1302>;	
+		status = "okay";
+	};
+
+	rtc-ds1302.c 程式 (rtc-ds1302-gpio, for GPIO設計)
+	chcek (rtc-lib.c/ interface.c/ hctosys.c/
+	
+6. 3G module
+	[*] USB support  --->
+		<*>     EHCI HCD (USB 2.0) support
+		<*>   USB Serial Converter support  --->
+			[*]   USB Generic Serial Driver
+			<*>   USB Qualcomm Auxiliary Serial Port Driver
+			<*>   USB Qualcomm Serial modem 
+			<*>   USB driver for GSM and CDMA modems
+
+7. GPIO 
+	.dts
+		&ds1302 {
+			pinctrl-names = "default";	
+			gpio-cs = <&gpio4 12 0>;
+			gpio-clk = <&gpio4 5 0>;
+			gpio-txd = <&gpio4 14 0>;
+			status = "okay";
+		};
+	driver
+		struct device_node *np = pdev->dev.of_node;
+		gpio_cs = of_get_named_gpio(np, "gpio-cs", 0);
+		gpio_clk = of_get_named_gpio(np, "gpio-clk", 0);
+		gpio_txd = of_get_named_gpio(np, "gpio-txd", 0);
+
+
+8. menuconfig -> freescale type -> IMX6Sole 勾選取消. Firmware compile Error(修正如下 - 設為空集合)
+	選擇其一 : Mach_Type 可以不用選擇
+	#ifdef CONFIG_SOC_IMX6SL
+	#else
+		#define init_mmdc_lpddr2_settings(dev) (0)
+		#define update_lpddr2_freq(ddr_rate) {}
+	#endif
+
+	#ifndef CONFIG_SOC_IMX6SL
+		#define imx6sl_set_wait_clk(enter) {}
+	#endif
+
+9. Step by Step Trace: 	(enable kernel hacking, Kernel debugging, low-level, early-print..)
+		設定kernel early_print uart : arch/arm/plat-mxc/include/mach/debug-macro.S #define UART_PADDR	MX6Q_UART2_BASE_ADDR
+	1. linux-3.10.17/arch/arm/boot/compressed/head.S:	start :	//開始
+		a. linux-3.10.17/arch/arm/boot/compressed/misc.c	decompress_kernel(...)//(Uncompressing Linux...)
+		b. __enter_kernel
+	2. linux-3.10.17/arch/arm/kernel/vmlinux.lds 鏈接腳本-指定stext為入口
+	3. linux-3.10.17/arch/arm/kernel/head.S:	
+	4. linux-3.10.17/arch/arm/kernel/head-common.S:		//start_kernel
+		a. __lookup_processor_type
+	5. linux-3.10.17/init/main.c	(__init start_kernel(void)) => early_print("-print message-");
+	6. linux-3.10.17/arch/arm/kernel/setup.c	(setup_arch(char **cmdline_p)
+		a. setup_machine_fdt(__atags_pointer)	 //__atags_pointer是bootloader传递参数的物理地址
+		b. unflatten_device_tree();	//解析設備樹
+	7. be32_to_cpu(blob->magic))	停住
+	8. linux-3.10.17/arch/arm/mach-imx/hardware.h
+
+
+
+
+kernel 3.15.6
+===============================Isuue(Bishop ubuntu)============================================
+1. imx-sdma 63fb0000.sdma: firmware not found
+	random: nonblocking pool is initialized
+	=> General setup  ---> [*] open by fhandle syscalls 	//(無效)
+	=> 更換 file system 就OK了.
+	=> 再觀察,此訊息與問題無相關性,還是可開機完成.
+
+=================================Q7_3.14.28 (simple filesystem)==================================
+kernel config setting :
+1. SMSC95XX  :  +CONFIG_USB_NET_SMSC95XX=y
+		Device Drivers
+			[*] Network device support  --->
+				USB Network Adapters  --->
+					<*>   SMSC LAN95XX based USB 2.0 10/100 ethernet devices
+2. USB_OTG :
+                insmod /lib/modules/3.14.28-g343f7ab-dirty/kernel/fs/configfs/configfs.ko
+                insmod /lib/modules/3.14.28-g343f7ab-dirty/kernel/drivers/usb/gadget/libcomposite.ko
+                insmod /lib/modules/3.14.28-g343f7ab-dirty/kernel/drivers/usb/gadget/usb_f_mass_storage.ko
+                insmod /lib/modules/3.14.28-g343f7ab-dirty/kernel/drivers/usb/gadget/g_mass_storage.ko file=/dev/sda1 removable=1
+2. wifi : 
+		Bus support  --->	
+			[*] PCI support
+		[*] Networking support  --->	
+			<*>   RF switch subsystem support  --->
+			-*-   Wireless  --->	
+				<*>   cfg80211 - wireless configuration API
+				[*]     cfg80211 wireless extensions compatibility
+				<*>   Generic IEEE 802.11 Networking Stack (mac80211)
+				[*]   Minstrel
+				[*]     Minstrel 802.11n support
+		Device Drivers  --->	
+			[*] Network device support  --->
+				[*]   Wireless LAN  --->	 
+					<*>   Ralink driver support  --->
+						<*>   Ralink rt27xx/rt28xx/rt30xx (USB) support
+		複製 rt2870.bin 到 /lib/firmware裡
+3. spi :
+		arch/arm/boot/dts/imx6q-rtx-q7.dts	:	flash: en25q32b@0 {
+									compatible = "fsl,en25q32b";
+		drivers/mtd/spi-nor/spi-nor.c		:	{ "en25qh32", 	INFO(0x1c7016, 0, 64 * 1024,  64, SECT_4K) },
+		drivers/mtd/devices/m25p80.c
+
+4. hdmi, lvds : 
+		uboot parameter, framebuffer, ipu setting, enable blank, output data 
+5.file system :
+		/lib/firmware/rt2870.bin
+		/lib/modules/3.14.28
+		/mnt/sde1 (mkdir -p /mnt/sde1)
+
+

@@ -1,0 +1,77 @@
+BitBake is a program written in the Python language. BitBake is a program written in the Python language. 
+
+1. the Yocto Project uses a build system based on the OpenEmbedded (OE) project, which uses the BitBake tool, to construct complete Linux images. 
+2. The BitBake and OE components are combined together to form Poky, a reference build system.
+3. OpenEmbedded 採用 BitBake 來做套件的 cross compilation 與管理，
+4. BitBake 使用 .bb files 與 bbclass 來建立 Linux distribution。
+
+sources/poky/bitbake/bin/bitbake
+sources/poky/meta/conf/bitbake.conf
+
+設置 Bitbake
+執行前述指令碼後會建立一個 conf/local.conf 檔案。
+此組態檔必需設置 Yocto 的建置引擎 Bitbake (Yocto Project 的核心元件)。
+
+./sources/meta-fsl-bsp-release/imx/meta-sdk/recipes-fsl/images/fsl-image-qt5.bb
+./poky/meta/classes/distro_features_check.bbclass
+
+bitbake fsl-image-qt5
+
+	distro_features
+	any_of_distro_features
+	required_distro_features
+	conflict_distro_features
+	
+Python functions : 
+	d.getVar("X", expand=False)
+	d.setVar("X", "value") ....
+	
+	
+-----------------------------------------------------------------------------------------
+-e sets the graphical back end for frame buffer and direct fb images. X11 is default if no backend is set.
+
+	MACHINE=<machine name> source fsl-setup-release.sh -b <build dir> -e <backend>
+	MACHINE=rtx-pitx-imx6q source fsl-setup-release.sh -b build-x11 -e x11
+	
+	若沒設MACHINE,則$MACHINE to 'imx6qsabresd'.
+	若沒設 x11, default DISTRO='fsl-imx-x11'
+	DISTRO='fsl-imx-x11'
+	
+	local.conf , bblayers.conf
+	
+	bitbake <parameter> <component>
+	bitbake <image name>
+	bitbake linux-rtx
+	
+	linux-rtx.bb
+	
+	layer : machine/rtx-pitx-imx6q.conf
+		distro/ ? fsl-imx-x11.conf
+		layer.conf
+		recipe-kernel/ .. linux-rtx_3.14.52.bb
+		recipe-uboot/  .. u-boot-rtx_2015.04.bb
+		
+PREFERRED_VERSION_<component>_<soc family> = "<version>"
+PREFERRED_VERSION_linux-rtx_mx6 = "3.14.52"
+PREFERRED_PROVIDER_virtual/kernel_mx6 = "linux-rtx"
+
+PREFERRED_PROVIDER_<component>_<soc family> = "<provider>"
+PREFERRED_VERSION_u-boot-imx = "2015.04"
+PREFERRED_PROVIDER_u-boot = "u-boot-rtx"
+PREFERRED_PROVIDER_virtual/bootloader = "u-boot-rtx"
+	
+SRC_URI =
+DL_DIR= 
+
+
+build/tmp/deploy/images/
+
+
+SOC_FAMILY = "mx6:mx6q:pitx"
+
+	--------------------------------
+	build chromium, local.conf : 
+		LICENSE_FLAGS_WHITELIST="commercial"
+		CORE_IMAGE_EXTRA_INSTALL += "chromium"
+	--------------------------------
+	bitbake fsl-image-qt5	
