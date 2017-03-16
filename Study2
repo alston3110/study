@@ -756,6 +756,7 @@ Source Code :	\\10.69.99.252 \Release\ADLink\ABB-PCBA\ABB\Yocto\SourceCode-2016-
 3110 PC3110 harry/harry
 
 /*------------------------------------------------------------------------------------20161208*/
+打包/解包 :
 sudo tar -pczvf PFT_161207_release.tgz PFT_161207_release
 sudo tar -pxzvf PFT_161207_release.tgz
 /*------------------------------------------------------------------------------------20161208*/
@@ -821,6 +822,7 @@ ssh root@192.168.11.35 (連線到板端)
 ssh rtx-3110@192.168.11.7 (連線到電腦)
 exit (離開)
 scp efm32cmd root@192.168.11.35:/home/root/ (copy efm32cmd到板端)
+
 ssh-keygen -f "/home/rtx-3110/.ssh/known_hosts" -R 192.168.11.35	(remove RSA host key for 192.168.11.35)
 /*------------------------------------------------------------------------------------20161212*/
 SI訊號, eye pattern 輸出:
@@ -1055,8 +1057,9 @@ Check SI 12,
 	1. 製作USB開機系統(用以下指令將clonezilla安裝於USB碟)
 		sudo mkfs.fat -F 32 /dev/sdc1
 		unzip clonezilla-live-20151012-wily-amd64.zip -d /media/rtx-3110/23FF-2328/
+		再生龍開機片製作完成!!
 	2. ESC key into BIOS, 設定BIOS為USB開機.
-	3. 進入clonezilla系統, 將檔案ghost回硬碟.
+	3. 進入clonezilla系統, 使用再生龍開機, mount上另一image usbdisk, 將檔案ghost回硬碟.
 
 網路Ip設定, 提供網路設定文件, 變更 /etc/network/interfaces
 /*------------------------------------------------------------------------------------20170117*/
@@ -1444,7 +1447,7 @@ fuser -m -k /run/media/sda1	(umount : target is busy)
 umount /dev/sda1
 /*------------------------------------------------------------------------------------20170307*/
 ubuntu抓圖軟體 : scrot
-	scrot -s file		 抓取滑鼠所選取的畫面
+	scrot -s file.png		 抓取滑鼠所選取的畫面
 
 /*------------------------------------------------------------------------------------20170310*/
 GitHub : https://github.com/alston3110
@@ -1453,9 +1456,114 @@ GitHub : https://github.com/alston3110
 3. git clone git@github.com:alston3110/start.git  (download git)
 4. git push origin master	(push to master)
 
-/*------------------------------------------------------------------------------------20170310*/
+/*------------------------------------------------------------------------------------20170313*/
+SI-12 螢幕保護程式
+	1. 系統設定-亮度與鎖定	關閉螢幕保護程式
+	2. setterm -blank 0	關閉螢幕保護程式
+	3. xset s 0		關閉螢幕保護程式
+	4. xset -dpms 		關閉電源管理
 
+	5. killall gnome-screensaver	關閉deamon gnome-screensaver
+	6. xset s 0 -dpms		關閉螢幕保護程式及電源管理
+/*------------------------------------------------------------------------------------20170313*/
+kernel uart consol 停住
+	fdt_high = 0xFFFFFFFF
+	initrd_high = 0xFFFFFFFF
+	在uboot 加入這參數.
+/*------------------------------------------------------------------------------------20170314*/
+Python : yocto Show Result - mp_result.py
+	1. num_lines = sum(1 for line in open('mp_result.log'))	//count line
+	2. line=fo.tell()					//current position
+	3. fo.seek(line)					//go to position ,same as fo(line,0)
+	4. str = fo.readline().split(" ")[0] 			//split" ", get array [0]
+	5. table = gtk.Table(num_lines+3, 3, True)		//creat table num_lines+3 x 3
+	6. table.attach(button, 0, 3, 0, 1)			//push button to (0,3 0, 1)
+/*------------------------------------------------------------------------------------20170314*/
+uboot 2015.04 study : board - rtx_adlink_mx6.c
+	1. checkboard()
+	2. dram_init()
+	3. board_init()
+		setup_usb()
+	4. power_init_board()
+	5. board_mmc_init()
+		mmc_get_env_devno()
+		board_mmc_getcd()
+		mmc_get_env_devno()
+		mmc_get_env_devno()
+		mmc_get_env_devno()
+	6. enable_lvds()
+	7. overwrite_console()
+	8. board_late_init()
+		mmc_get_env_devno()
+		board_late_mmc_env_init()
+			mmc_get_env_devno()
+			mmc_map_to_kernel_blk()
+	9. board_eth_init()
+		setup_iomux_enet()
+		setup_pcie()
+		setup_iomux_usb()
+	10. board_phy_config()
+	11. mmc_get_env_devno()
+		board_mmc_getcd()
+		mmc_get_env_devno()
+		mmc_get_env_devno()
+		board_mmc_getcd()
+		mmc_get_env_devno()
+		board_mmc_getcd()
+/*------------------------------------------------------------------------------------20170315*/
+Q7_EFM_Setting
 
+PIN	NAME			I/O  	function	
+------------------------------------------------------------------------
+PD7	PMIC_detect		I 	ADC0_CH7 (bADCVoltageGotFlag : 2.4V - 2.8V)
+PC14	ACMP1_CR2032		I 	ACMP1-CH6(Cell Battery)
+PC15	iMX6_INT			沒使用
+PF0	SWCLK			I/O	MCU_IF
+PF1	SWDIO			I/O	MCU_IF
+PF2	PE13				沒使用
+PE12	MCU_SDA			I/O	I2C
+PE13	MCU_SCL			I/O	I2C
+PA0	MCU_PWR_ON		O 	power enable ping
+PC0	3V2_STB			I 	ACMP0-CH0(DC IN)
+PC1	PWRBTN			I 	power button
+PB11	MCU_ON_OFF_REQ		O 	power sequence
+PB13	MCU_BOOT			沒使用
+/*------------------------------------------------------------------------------------20170315*/
+Adlink - ABB : Install ubuntu 16.04
+	1. git clone ssh://gitolite@git-server.rtx.org/Ubuntu/16.04/rootfs.git
+	2. tar jxvf ubuntu-16.04-hf-base-openssh-2016-04-27.tar.bz2 -C /media/rtx-3110/ubuntu/
+	3. check console :	General setup  --->  [*] open by fhandle syscalls (Solved)
+				[ TIME ] Timed out waiting for device dev-ttymxc1.device.
+				[DEPEND] Dependency failed for Serial Getty on ttymxc1
+
+Ubuntu Install Gstreamer :  
+1. apt-get update; apt-get upgrade
+2. apt-get install dpkg-dev
+3. gstreamer-1.4.1
+	a. tar Jxvf gstreamer-1.4.1.tar.xz
+	b. ./autogen.sh --prefix=/usr && make all && sudo make DESTDIR=/ install
+		- apt-get install autoconf make autopoint libtool pkg-config bison flex gtk-doc-tools libglib2.0-dev libasound-dev x264
+4. gst-plugins-base-1.4.1
+	a. tar Jxvf gst-plugins-base-1.4.1.tar.xz
+	b. ./autogen.sh --prefix=/usr && make all && sudo make DESTDIR=/ install
+5. gst-plugins-good-1.4.1
+	a. tar Jxvf gst-plugins-good-1.4.1.tar.xz
+	b. ./autogen.sh --prefix=/usr && make all && sudo make DESTDIR=/ install
+將 (imx-lib, firmware-imx, libfslcodec, libfslparser, imx-vpu, libfslvpuwrap, imx-gpu-viv) 安裝!!
+6. gst1.0-fsl-plugins-4.0.3
+	a. tar -zxvf gst1.0-fsl-plugins-4.0.3.tar.gz
+	b. ./autogen.sh --prefix=/usr PLATFORM=MX6 && make all && sudo make DESTDIR=/ install
+		vi libs/v4l2_core/gstimxv4l2.c
+		- apt-get install libg2-dev
+7. gst-plugins-bad-1.4.1
+	a. tar Jxvf gst-plugins-bad-1.4.1.tar.xz
+	b. ./autogen.sh --prefix=/usr --disable-cocoa --disable-gtk-doc && make all && sudo make DESTDIR=/ install
+		-apt-get install liborc-0.4-dev libdirectfb-dev libfaad-dev mpg123 libmpg123-dev
+8. gst-plugins-ugly-1.4.1
+	a. tar Jxvf gst-plugins-ugly-1.4.1.tar.xz
+	b. ./autogen.sh --prefix=/usr && make all && sudo make DESTDIR=/ install
+		- apt-get install libx264-dev libmpeg2-4-dev
+/*------------------------------------------------------------------------------------20170315*/
 
 
 
@@ -1475,11 +1583,7 @@ Hardware information :
 	static lshw
 yocto server 要update
 ntpdate or ntpdate-sync
-WM - MP/RUNIN
 uboot frequence / imx6 detail infomation
-
-
-MP Tool
 gstreme..
 
 /*--------------------------------------------------------------------------------------------*/
