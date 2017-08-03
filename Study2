@@ -1,4 +1,10 @@
-/*--------------------------------------------------------------------------------------------*/
+/*------------------------------------------------------------------------------------20170307*/
+[  OK  ] Started Update UTMP about System Runlevel Changesubuntu抓圖軟體,picture : scrot
+	scrot -s file.png		 抓取滑鼠所選取的畫面, 存在當下目錄
+/*------------------------------------------------------------------------------------20170504*/
+Ubuntu System :
+	sudo mount -t cifs -o username="alstonlai",password="please",uid="1000",gid="1000" //10.69.99.252/Release ~/Work/Server
+	sudo mount -t cifs -o username="alstonlai",password="please",uid="1000",gid="1000" //10.69.99.252/sw ~/Work/Server
 /*------------------------------------------------------------------------------------20160831*/
 目前Filesystem, 開始位置 32M 處.
 partition: 單位 = 磁區 之於 1 * 512 = 512 位元組
@@ -402,6 +408,7 @@ ADLINK 板子到了. Duallite
 6. Add kernel device tree
 
 7. random: nonblocking pool is initialized	(hang up ...)
+	目前覺得與RTC EFM有關, hwclock.
 8. update uboot, kernel to server
 
 9. 修改kernel soc device tree (dual -> duallite),可開機進入
@@ -1000,6 +1007,8 @@ Uboot 2015.04 OverCurrent disable Setting :
 	
 OTG port PORTSC1 : 0x2184184 可以check是否有 over current!!
 	PE(Port Enabled), OCC(Over-current Change), OCA(Over-current Active), PP(Port Power)  
+OTG port Control Register : 0x2184800 可以確定目前控制狀況
+	PWR_POR: OVER_CUR_POL: OVER_CURRENT_DIS: 
 /*------------------------------------------------------------------------------------20170109*/
 未來ADLINK USB_OTG_PWR 變更, 要再變更FW!!!!!!!!!!
 	uart5 {
@@ -1157,6 +1166,7 @@ Wrapping Machine :
 		Bin : 
 			1. sdcard boot & dd if=/dev/zero of=/dev/mmcblk0
 			2. MFG-Tools-2017-02-02 
+				- Update完成要先重新開機,讓uboot參數寫入.
 			3. BSP_20170202.bin	
 				dd if=/dev/mmcblk0 of=/mnt/sda1/BSP_20170202.bin bs=512 count=2
 				dd if=/dev/mmcblk0boot0 of=/mnt/sda1/BSP_20170202.bin bs=1k seek=1 skip=1 count=1024 
@@ -1446,10 +1456,7 @@ ftpput -u username -p password IPADDRESS destination sources
 fuser -m -k /run/media/sda1	(umount : target is busy)
 fuser -m -k /run/media/mmcblk1p1
 umount /dev/sda1
-/*------------------------------------------------------------------------------------20170307*/
-ubuntu抓圖軟體 : scrot
-	scrot -s file.png		 抓取滑鼠所選取的畫面
-
+	
 /*------------------------------------------------------------------------------------20170310*/
 GitHub : https://github.com/alston3110
 1. GitHub : 註冊建立 帳號 alston3110, New 一個 Repository!!
@@ -1573,7 +1580,7 @@ Ubuntu Install Gstreamer :
 		2. apt-get install libtool-bin
 		3. ./autogen.sh --prefix=/usr && make all && make DESTDIR=/ install
 	g. imx-gpu-viv
-		1. ./imx-gpu-viv-5.0.11.p8.4-hfp.bin
+		1. ./imx-gpu-viv-5.0.11.p4.4-hfp.bin
 		2. cp -avrf apitrace/x11/* /
 		   cp -avrf g2d/* /
 		   cp -avrf gpu-core/* /
@@ -1618,7 +1625,7 @@ Ubuntu Install Gstreamer :
 	sudo rm /usr/lib/libGAL.so
 	sudo ln -s /usr/lib/libGAL-x11.so /usr/lib/libGAL.so
 	sudo rm /usr/lib/libVIVANTE.so
-	sudo ln -s /usr/lib/libVIVANTE-x11.so /usr/lib/libVIVANTE.
+	sudo ln -s /usr/lib/libVIVANTE-x11.so /usr/lib/libVIVANTE.so
 	sudo rm /usr/lib/libEGL.so
 	sudo rm /usr/lib/libEGL.so.1
 	sudo ln -s /usr/lib/libEGL-x11.so /usr/lib/libEGL.so
@@ -1681,30 +1688,782 @@ Python Study
 
 /*------------------------------------------------------------------------------------20170327*/
 Q7 : uboot - count :  uboot-count.patch
+	1. 使用ltib的uboot作更改.
      mcu - count : mcu-count.patch
-     
-/*------------------------------------------------------------------------------------20170327*/
+     	1. 取得patch : diff --exclude=".*" -Naur main main-count > mcu-count.patch
+     	2. PATCH : patch -p0 < mcu-count.patch
+     	3. 還原 : patch -R -p0 < mcu-count.patch
+/*------------------------------------------------------------------------------------20170330*/
+ADLINK : A2
+	efm-mcu
+	1. change POR/ PMIC_ON_OFF_REQ to open-drain
+	yocto
+	1. repo init -u git://git.freescale.com/imx/fsl-arm-yocto-bsp.git -b imx-4.1.15-1.0.0_ga
+	   repo sync
+	2. patch -p0 < 0001_sources.patch
+	   patch -p0 < 0002_sources.patch
+	   patch -p0 < 0003_sources.patch
+	   patch -p0 < 0004_sources.patch
+	3. DISTRO=fsl-adlink-abb MACHINE=imx6dl-adlink-abb source fsl-setup-release.sh -b build-abb
+	4. bitbake fsl-image-abb
+	
+Yocto error : 異常building終止 - (筆電高溫當機)
+/*------------------------------------------------------------------------------------20170407*/
+Adlink_Abb - MP tools
+1. Release BSP/ MCU firmware/ Mp tools
+2. 架設平台, ABB-A2
+/*------------------------------------------------------------------------------------20170411*/		
+Wrapping_Machine - MP issue
+1. OTG : 失效
+2. Touch : 失效
+- 因為icom patch的影響, 因此採用Parent: d99ee24551f7e476ff944e9967a560316185bf29的uImage.
+
+/*------------------------------------------------------------------------------------20170412*/
+Adlink_Abb - MP tools
+	- 解決canbus issue, 新sdcard速度比較慢, 造成get_result抓can.log時timeout
+		目前要把時間延長到50秒以上.
+	- 使用網路芳鄰的方式上傳LOG. 需要kernel去enable
+		File systems  ---> [*] Network File Systems  --->
+			<*>   CIFS support (advanced network filesystem, SMBFS successor)
+				... 相關都Enable
+		mount -t cifs -o username="adlink",password="12345" //192.168.11.4/Test_report /mnt
+		mount -t cifs -o username="110",password="110" //192.168.11.4/Temp /mnt
+		mount -t cifs -o username="Everyone",password="0" //192.168.11.4/popo /mnt
+		
+		mount -t cifs -o username="adlink",password="12345" //192.168.11.2/log /mnt
+		mount -t cifs -o username="Everyone",password="0",domain="acer01",uid="0",gid="0" //192.168.11.2/test /mnt
+		mount -t cifs -o username="0",password="0" //192.168.11.2/test /mnt
+		
+		mount -t cifs -o username="Everyone",password="0" //192.168.11.3/Temps /mnt
+/*------------------------------------------------------------------------------------20170418*/
+Adlink_Abb - MP tools
+	- 變更log format to Adlink.
+/*------------------------------------------------------------------------------------20170418*/
+Adlink_Abb - BSP 
+repo init -u git://git.freescale.com/imx/fsl-arm-yocto-bsp.git -b imx-4.1.15-1.0.0_ga
+	(http://git.freescale.com/git/cgit.cgi/imx/fsl-arm-yocto-bsp.git)
+repo sync
+DISTRO=fsl-adlink-abb MACHINE=imx6dl-adlink-abb source fsl-setup-release.sh -b build-1
+bitbake core-image-base	: 73584KB
+Do BSP:
+	1. sudo dd if=/dev/zero of=/dev/sdc bs=1M count=64		(p0 = 64M)
+	2. sudo dd if=u-boot-adlink-2015.04-r0.imx of=/dev/sdc bs=1024 seek=1
+	3. sudo dd if=uImage--4.1.15-r0-imx6dl-adlink-abb-20161220152735.bin of=/dev/sdc bs=1024 seek=13312
+	4. sudo dd if=uImage--4.1.15-r0-imx6dl-rtx-adlink-20161220152735.dtb of=/dev/sdc bs=1024 seek=12800
+	5. sudo fdisk /dev/sdc	- "131072"(64M) - "+3200M"  :/dev/sdc1 131072 6684671 3276800 83  Linux
+	6. sudo mkfs.ext4 -j -L Yocto /dev/sdc1 : filesystem ( /dev/sdc1 131072 "0x20000" "64M" )
+	7. mount -t ext4 /dev/sdc1 /mnt  (skip,system auto mount)
+	8. sudo tar --numeric-owner -pjxvf core-image-base-imx6dl-adlink-abb-20170419070954.rootfs.tar.bz2 -C /media/rtx-3110/Yocto/
+bitbake core-image-minimal-xfce : 146704KB
+bitbake qt4e-demo-image : 
+
+/*------------------------------------------------------------------------------------20170420*/
+canbus - 修正canbus測試方式!
+	1. ip link set can0 up type can bitrate 125000
+	2. cansend can0 500#1E.10.10 ; candump -T 5000 can0
+	3. 修正client - server, Wait 的方式.
+/*------------------------------------------------------------------------------------20170420*/
+x11vnc - Server 指令
+	1. x11vnc -bg -rfbport 5900 -skip_lockkeys -o /home/rtx-3110/.x11vnc.log.rtx3110-Aspire-5750G\:5900
+/*------------------------------------------------------------------------------------20170424*/
+Sample : ABB(A1) SZ specification   (台灣工研院)
+	1. uboot : 變更 hdmi 輸出
+	2. kernel : 變更hdmi - enable.  for A1 board
+	3. BSP/ MCU : 使用B1 . 17/04/05 版本. (MCU電阻141 需要拿掉, 才能開機)
+
+firefox(Browser) 沒辦法播 youtube , 調整系統時間後, 就正常可以播放.
+ntpdate time.stdtime.gov.tw
+/*------------------------------------------------------------------------------------20170424*/
+MP - Disable Wifi
+	open function enable / disable
+/*------------------------------------------------------------------------------------20170425*/
+Pico_Pitx - BSP 
+repo init -u git://git.freescale.com/imx/fsl-arm-yocto-bsp.git -b imx-4.1-krogoth
+repo init --config-name
+repo sync
+	0. meta-rtx-arm 搬到sources中
+	1. DISTRO=pitx-x11 MACHINE=imx6q-pitx source fsl-setup-release.sh -b build-pitx
+	2. bblayers.conf : BBLAYERS += " ${BSPDIR}/sources/meta-rtx-arm "
+	3. bitbake core-image-minimal ( bitbake linux-pitx, bitbake u-boot-pitx)
+		- PREFERRED_PROVIDER_virtual/bootloader_mx6 = "u-boot-pitx"
+	- build kernel : 找不到defconfig, 還原linux-pitx_4.1.15.bb (do_copy_defconfig)
+	4. bitbake fsl-image-pitx (Fail XX, 先build 原系統)
+	   bitbake fsl-image-qt5 (X ERROR: Nothing RPROVIDES 'libgl-mesa-dev'..)
+	5. try 	DISTRO=fsl-imx-x11 MACHINE=imx6qsabresd source fsl-setup-release.sh -b build-x11
+		bitbake fsl-image-qt5
+	6. DISTRO=pitx-x11 MACHINE=imx6q-pitx source fsl-setup-release.sh -b build-x11
+		bitbake fsl-image-qt5
+	
+	9. kernel git old/new : 
+		git://git.freescale.com/imx/linux-2.6-imx.git;protocol=git;branch=imx_4.1.15_1.0.0_ga
+		http://git.freescale.com/git/cgit.cgi/imx/linux-2.6-imx.git/commit/?h=imx_4.1.15_1.0.0_ga
+		git://git.freescale.com/imx/linux-imx.git;protocol=git;branch=imx_4.1.15_2.0.0_ga
+		http://git.freescale.com/git/cgit.cgi/imx/linux-imx.git/commit/?h=imx_4.1.15_2.0.0_ga
+		git://git.freescale.com/imx/uboot-imx.git;protocol=git;branch=imx_v2016.03_4.1.15_2.0.0_ga
+		http://git.freescale.com/git/cgit.cgi/imx/uboot-imx.git/commit/?h=imx_v2016.03_4.1.15_2.0.0_ga
+		
+/*------------------------------------------------------------------------------------20170428*/
+Compile Tools : 
+	1. Ubuntu 14.04.5 LTS (PICO ubuntu) 系統中compile target tools!!
+		cc uartp.c -o uartp
+		cc uartp_debug.c -o uartp_debug
+	2. /opt/cross/rtx-gcc-4.9.3-glibc-2.19-hf-64bits/arm-rtx-linux-gnueabihf/bin/arm-rtx-linux-gnueabihf-cc uartp_debug.c -o uartp_debug
+		file uartp_debug (去check, for target - ARM 所使用)
+		uartp_debug: ELF 32-bit LSB  executable, ARM, EABI5 version 1 (SYSV), dynamically linked (uses shared libs), for GNU/Linux 2.6.19, not stripped
+	3. 提供給客戶
+		提供客戶kernel source, 及 kernel_source/script 在 target build 中產生. 
+/*------------------------------------------------------------------------------------20170509*/
+Wrapping Machine : BSP issue
+	1. 製作BSP.bin, 系統需要先開機一次.
+	2. 確認uboot參數已經寫入default處.
+	3. 外卡MP開機, 寫入S/N及MAC才不至於造成uboot參數未填入前被誤寫.順序上的錯誤發生,而無法開機.
+	4. 到工廠, 更改量產程序.
+	5. Mp uboot scan DDR 過久, 變更uboot DDR scan的range.
+	
+/*------------------------------------------------------------------------------------20170510*/
+Kernel 4.1.15 : UART0_RI issue
+	UART Control Register 2 (UART1_UCR2) : 202_0084
+	UART Status Register 1 (UART1_USR1) : 202_0094
+	UART Status Register 1 (UART1_USR1) : 202_0098
+	/unit_tests/memtool 0x02020080 8
+	/unit_tests/memtool 0x02020088=0x00000300
+	/unit_tests/memtool 0x02020090=0x841
+	
+	DTREN (UCR3[13]) ---> DTRF(USR2[13])
+	DTRDEN(UCR3[3]) ---> DTRD(USR1[7])
+	RI(UCR3[8]) ---> RIDELT(USR2[10])
+	DCD(UCR3[9]) ---> DCDDELT(USR2[6])
+	
+	UCR3_DTRDEN | UCR3_RI | UCR3_DCD  : Enable DSR/RI/DCD Interrupt (DTE mode, DTR -> DSR)
+	USR1_DTRD | USR2_DCDDELT | USR2_RIDELT : Clear DSR/RI/DCD Interrupt (DTE mode, DTR -> DSR)
+	print : dev_err(sport->port.dev, "imx_get_mctrl : TIOCM = %x \n", tmp);
+	TIOCM Status :
+		bit8	7	6	5	4	3	2	1	0
+		DSR	RNG(RI)	CAR(CD)	CTS	SR	ST	RTS	DTR	LE
+	DTE :	(IN)	(IN)	(IN)	(IN)			(OUT)	(OUT)
+	1. 因為產生INTERRUPT未去處理,而一直在中斷處理中掛掉.
+	2. 若去Interrupt中去處理,則imx_get_mctrl已被執行,再去get_mctrl無法取得正確 TIOCM.
+	=> imx_set_mctrl disable DSR/RI/DCD/ interrupt 
+/*------------------------------------------------------------------------------------20170512*/
+架設PICO 平台 for B21, BSP :
+	1. sudo dd if=/dev/zero of=/dev/sdc bs=1M count=64		(p0 = 64M)
+	2. sudo dd if=u-boot.imx of=/dev/sdc bs=1024 seek=1
+	3. sudo dd if=uImage-3.14.28 of=/dev/sdc bs=1024 seek=13312
+	4. sudo dd if=imx6q-rtx-pitx-3.14.28.dtb of=/dev/sdc bs=1024 seek=12800
+	5. sudo fdisk /dev/sdc	- "131072"(64M) - "+3300M"  :/dev/sdc1 1131072 6889471 3379200 83 Linux
+	6. sudo mkfs.ext4 -j -L Ubuntu_Pico /dev/sdc1 : filesystem ( /dev/sdc1 131072 "0x20000" "64M" )
+	7. mount -t ext4 /dev/sdc1 /mnt  (skip,system auto mount)
+	8. sudo tar --numeric-owner -pxvf ubuntu-14.04.tar -C /media/rtx-3110/Ubuntu_Pico/
+		(不可直接解開複製, 會有權限的問題, 而無法開機)
+	1. 3G
+	3. .profile => update.sh
+
+/*------------------------------------------------------------------------------------20170515*/
+調整B21 dts file
+	改變
+	1. MX6QDL_PAD_DISP0_DAT9__WDOG2_B	//WDOG2
+	2. MX6QDL_PAD_NANDF_CS1__GPIO6_IO14	//UART5_M1
+	3. MX6QDL_PAD_EIM_D23__GPIO3_IO23	//UART1_M0
+	4. MX6QDL_PAD_EIM_D24__GPIO3_IO24	//UART1_TM
+	5. MX6QDL_PAD_EIM_D25__GPIO3_IO25	//UART1_M1
+	6. MX6QDL_PAD_CSI0_DAT18__UART5_RTS_B	//UART5_RTS
+	7. MX6QDL_PAD_CSI0_DAT19__UART5_CTS_B	//UART5_CTS
+	8. MX6QDL_PAD_GPIO_1__USB_OTG_ID	//USB_OTG_ID	
+	9. MX6QDL_PAD_KEY_ROW4__GPIO4_IO15	//OTG_PWR_EN
+	10. MX6QDL_PAD_KEY_COL0__GPIO4_IO06	//H1_PWR_EN
+	11. MX6QDL_PAD_GPIO_4__GPIO1_IO04	//MCU_INT
+	新增
+	1. MX6QDL_PAD_EIM_D31__GPIO3_IO31	//3V3_MEN
+	2. MX6QDL_PAD_KEY_COL1__GPIO4_IO08	//UART5_SLEW
+	3. MX6QDL_PAD_KEY_ROW1__GPIO4_IO09	//UART1_SLEW
+	4. MX6QDL_PAD_NANDF_ALE__GPIO6_IO08	//SD4_RESETn
+	治具 
+	mp-tools
+	cifs
+/*------------------------------------------------------------------------------------20170518*/	
+CanBus Server for B10 : tx-abb-yocto-2017-5-18-canbus-server-B10.zip
+	1. efm_mcu update disable
+	2. mp_canbus_server -> /home/root/
+	3. rc.local	-> /etc/rc.local
+	4. version	-> /etc/version
+	5. chmod 755	-> rc.local, mp_111111111bus_version
+/*------------------------------------------------------------------------------------20170522*/
+PICO - 3G : 連網設定
+ubuntu 3G :
+	0. sim 卡要插入(台灣大哥大 無帳號密碼)
+	1. vi /etc/wvdial.conf
+		[Dialer alston1]
+		Init1 = ATZ
+		Init2 = ATQ0 V1 E1 S0=0 &C1 &D2 +FCLASS=0
+		Profile = taiwan
+		Init6 = AT+CGDCONT=1,"IP","internet"
+		Stupid Mode = yes
+		ISDN = 0
+		Modem Type = Analog Modem
+		Phone = *99#
+		Modem = /dev/ttyACM0
+		Username = NA
+		Dial Command = ATDT
+		Password = pass
+		Baud = 460800
+	2. wvdial alston1 &
+	3. ping 8.8.8.8
+	-------------------------------------------------------------
+	0. sim 卡要插入(中華電信 密碼:0000)
+	1. vi /etc/wvdial.conf
+		[Dialer test]
+		Init1 = ATZ
+		Init2 = ATQ0 V1 E1 S0=0 &C1 &D2 +FCLASS=0
+		Init3 = AT+CPIN="0000"
+		Profile = taiwan
+		Init6 = AT+CGDCONT=1,"IP","internet"
+		Stupid Mode = yes
+		ISDN = 0
+		Modem Type = Analog Modem
+		Phone = *99#
+		Modem = /dev/ttyACM0
+		Username = NA
+		Dial Command = ATDT
+		Password = pass
+		Baud = 460800
+	2. wvdial test &
+	3. ping 8.8.8.8	
+	-------------------------------------------------------------
+	可建立conf如下 : cat PinCheck.conf
+	[Dialer check]
+	Init3 = AT+CPIN?
+	Modem = /dev/ttyACM0
+	[Dialer ping]
+	Init3 = AT+CPIN="0000"
+	Modem = /dev/ttyACM0
+	ISDN = 0
+	Modem Type = Analog Modem
+	Dial Command = ATDT
+	Phone = *99#
+	Username = NA
+	Password = pass
+	[Dialer Connect]
+	Profile = taiwan
+	Init6 = AT+CGDCONT=1,"IP","internet"
+	Stupid Mode = yes
+	ISDN = 0
+	Modem Type = Analog Modem
+	Phone = *99#
+	Modem = /dev/ttyACM0
+	Username = NA
+	Dial Command = ATDT
+	Password = pass
+	Baud = 460800
+
+	操作順序如: 
+		1. wvdial ping -C PinCheck.conf &	(設定PING碼,連接上網,背景執行)
+		2. wvdial check -C PinCheck.conf	(檢查PING碼是否Ready)
+		3. wvdial Connect -C PingCheck.conf &	(連接上網,背景執行)
+/*------------------------------------------------------------------------------------20170522*/
+PICO PBCA : 
+	1. ethernet ping fail (3G執行完後)
+		- route del default (砍掉default)
+	2. 3G 重新寫 support sim卡有密碼或沒有的.
+/*------------------------------------------------------------------------------------20170523*/
+Q7 Serial Download Mode :
+	- tset DDR_Stress_Tester
+	- test internal/external cards boot
+	- test stress
+	- test GPU
+	客戶 infomation : Internal Emmc
+	- uname -r  ->  3.0.101-ts-armv71
+	- /opt/viv_samples
+/*------------------------------------------------------------------------------------20170602*/
+ADLINK : 
+	- export QT_QPA_PLATFORM=xcb
+	- export DISPLAY=:0.0
+	- xhost +
+	- cd /usr/share/qt5/examples/webenginewidgets/browser/
+	- ./browser -platform xcb -plugin evdevtouch:/dev/input/event0
+	
+	- export FB_MULTI_BUFFER=2
+	- export QT_EGLFS_IMX6_NO_FB_MULTI_BUFFER=1
+	
+	- export QT_QPA_XCB_DEBUG
+/*------------------------------------------------------------------------------------20170602*/
+PICO-B21 : dts modify
+	- 修改Kernel : 
+		sudo dd if=uImage-3.14.28 of=/dev/sdc bs=1024 seek=13312
+		sudo dd if=imx6q-rtx-pitx-3.14.28.dtb of=/dev/sdc bs=1024 seek=12800
+		sudo cp -avrf lib /media/rtx-3110/Ubuntu_Pico/
+		sudo cp -avrf include /media/rtx-3110/Ubuntu_Pico/usr/
+	
+/*------------------------------------------------------------------------------------20170603*/
+PICO-B21 : 
+	- uart setting 
+		UART1 :	/sys/devices/soc0/soc.1/2100000.aips-bus/21e8000.serial/driver/2020000.serial/sp339e_mode
+		UART5 : /sys/devices/soc0/soc.1/2100000.aips-bus/21e8000.serial/driver/21f4000.serial/sp339e_mode
+	- RS485 : m0,m1=0,1 => sp339e dir=1/0 : in/out => (RX,DCD), (30/31), (R1/R2) 
+	- RS422 : m0,m1,dir=1,1,0 => sp339e out(RX,DCD) in(TX,DTR) or out(30,31) in(28,27) or out(R1,R2) in(R3,R4)
+
+/*------------------------------------------------------------------------------------20170607*/
+PICO-B21 : EFM-MCU iMX6-PICO-170607
+	- 變更電阻 MCU_ON_OFF_REQ 接地電阻 R61 電阻需要移除.
+	- 變更 MCU_ON_OFF_REQ 及 POR_B 為 open_drain.
+	- 與 Adlink efm-muc merge.
+PICO-B21 : Uboot 
+	- modify SP339E TM,M0,M1=0,0,0
+	- Add 3V3_EN
+	- 2.8V -> 2.5V
+=> 硬體要做相對的變更
+PICO-B21 : PCBA Release.
+/*------------------------------------------------------------------------------------20170608*/
+PICO-B21 : WIFI(AW-CB161H) 一開始OK, 但後面Fail.
+	- ifconfig wlan0 down -> ifconfig wlan0 up -> fail
+	- 去網路抓新的 firmware/rtlwifi 就 OK!!!
+PICO-B21 : OverCurrent - 變更uboot
+PICO-B21 : SLEW	- 變更kernel - imx.c
+PICO-B21 : UART1 8 pin (硬體問題) - 變更硬體後 Check OK
+PICO-B21 : MP OK
+	MCU 部份 check version & time !! (所以要接網路)
+/*------------------------------------------------------------------------------------20170612*/
+PICO-B21 : PICO_MX60T (4GB eMMC, 1GB DDR3)
+PICO-B21 : PICO_MX61T (4GB eMMC, 2GB DDR3)
+	uboot 要變更.
+	- U_BOOT_DEFAULT_CONFIG=rtx_pitx_mx6q_nanya2g_dtb_rtx_all_linux_defconfig
+	autorun.sh 變更.
+		- VERSION="rtx-pico-ubuntu-20170609-mksd-DDR2G"
+		- UBOOT="$DATAPATH/u-boot-2g.imx"
+	.mk_update_sd.rc
+		- zipfilename=rtx-pico-ubuntu-61T
+PICO-B21 : PICO_MX62T (8GB eMMC, 1GB DDR3)
+	autorun.sh 變更.
+		- VERSION="rtx-pico-ubuntu-20170609-mksd-EMMC8G"	
+		- ROOTFS_SIZE=6600
+		- 限制 $TOTAL_SIZE -gt 7240000000
+	.mk_update_sd.rc
+		- zipfilename=rtx-pico-ubuntu-62T
+PICO-B21 : PICO_MX63T (8GB eMMC, 2GB DDR3)
+	uboot 要變更.
+	- U_BOOT_DEFAULT_CONFIG=rtx_pitx_mx6q_nanya2g_dtb_rtx_all_linux_defconfig
+	autorun.sh 變更.
+		- VERSION="rtx-pico-ubuntu-20170609-mksd-DDR2G-EMMC8G"
+		- ROOTFS_SIZE=6600
+		- UBOOT="$DATAPATH/u-boot-2g.imx"
+		- 限制 $TOTAL_SIZE -gt 7240000000
+	.mk_update_sd.rc
+		- zipfilename=rtx-pico-ubuntu-63T
+
+/*------------------------------------------------------------------------------------20170613*/
+PICO-B21 : Chamber Firmware for tset
+PICO-B21 : ESD & EMI Firmware for test
+PICO-B21 : MP 環境架設 
+PICO-B21 : Release BSP for 不同組態的板端
+/*------------------------------------------------------------------------------------20170613*/
+LDO_BYPASS/ LDO_ENABLE Mode
+	設定電壓輸出Target值. 
+			operating-points = <
+				/* kHz    uV */
+				1200000 1275000
+				996000  1250000
+				852000  1250000
+				792000  1175000
+				396000  975000
+			>;
+			fsl,soc-operating-points = <
+				/* ARM kHz  SOC-PU uV */
+				1200000 1275000
+				996000	1250000
+				852000	1250000
+				792000	1175000
+				396000	1175000
+			>;
+
+/*------------------------------------------------------------------------------------20170614*/
+PICO-B21-Yocto-QT-GUI :
+	1. kernel 4.1.15	update PICO-B21 dts
+	2. DISTRO=pitx-x11 MACHINE=imx6q-pitx source fsl-setup-release.sh -b build-pitx
+	3. bblayers.conf : BBLAYERS += " ${BSPDIR}/sources/meta-rtx-arm "
+	4. bitbake fsl-image-pitx
+	5. 安裝系統到SDCARD.
+		sudo dd if=/dev/zero of=/dev/sdc bs=1M count=64		(p0 = 64M)
+		sudo dd if=u-boot.imx of=/dev/sdc bs=1024 seek=1
+		sudo dd if=uImage-imx6q-pitx.bin of=/dev/sdc bs=1024 seek=13312
+		sudo dd if=uImage-imx6q-rtx-pitx.dtb of=/dev/sdc bs=1024 seek=12800
+		sudo fdisk /dev/sdc	- "131072"(64M) - "+3200M"
+			所用裝置 開機      開始         結束      區塊   識別號  系統
+			/dev/sdc1           131072     6684671     3276800   83  Linux
+		sudo mkfs.ext4 -j -L Yocto_PICO_B21 /dev/sdc1
+			filesystem ( /dev/sdc1 131072 "0x20000" "64M" )
+		sudo tar --numeric-owner -pjxvf fsl-image-pitx-imx6q-pitx-20170614092148.rootfs.tar.bz2 -C /media/rtx-3110/Yocto_PICO_B21/
+		
+/*------------------------------------------------------------------------------------20170615*/
+Uart5 : Driver & DTS 心得
+	1. device tree設定support pinctrl-name 及 pinctrl :
+		pinctrl-names = "default", "rs422";
+	2. driver透過pinctrl_get去獲取pin control state hold句柄 :
+		sport->pinctrl = devm_pinctrl_get(&pdev->dev);
+	3. driver控制及切換目前狀態 :
+		pinctrl_select_state(sport->pinctrl, sport->pins_rs232);
+		pinctrl_select_state(sport->pinctrl, sport->pins_rs422);
+/*------------------------------------------------------------------------------------20170615*/
+Rebuild-Yocto
+	1. 若要移除
+		- 回復硬碟空間,可移除building過程中的相關資料 : rm -rf tmp/work
+		- 清除主機端工具 : rm -rf tmp/sysroots
+		- 過大累積的系統images : rm -rf tmp/deploy/images
+		- 清理特定的組件及重建它 : bitbake <component> -c clean -f
+		- 認為清理特定的組件及構建和下載都要重建 : bitbake <component> -c cleanall -f
+	2. Re-Building相關images 
+	 	- bitbake fsl-image-pitx -c cleanall -f 
+		- bitbake linux-pitx -c cleanall -f
+		- bitbake u-boot-pitx -c cleanall -f
+	3. 執行Building
+		bitbake fsl-image-pitx 
+/*------------------------------------------------------------------------------------20170619*/
+驗證YOCTO PICO-B21 相關IO驗證, kernel 4.1.15
+	1. SPEAKER/ Headphone /Microphone :	
+		alsamixer - Headphone 設定 DAC
+	2. Wifi, Ethernet
+	3. USB
+	4. LVDS,HDMI
+	5. UART5 : /sys/devices/soc0/soc/2100000.aips-bus/21f4000.serial/tty/ttymxc4/
+	6. UART1 : /sys/devices/soc0/soc/2000000.aips-bus/2000000.spba-bus/2020000.serial/tty/ttymxc0
+	7. SPI, I2C	
+	
+/*------------------------------------------------------------------------------------20170620*/
+build kernel-imx/u-boot for iMX6-Dual Q7 Board (CPU: Freescale i.MX6 family TO1.5)
+
+1. 量測點
+	VDDSOC(量測點A_IN SH10) - VDDSOC_IN	>>>>>  VDDSOC_CAP - VDDSOC_CAP(量測點A_OUT SH16)	
+	VDDCORE(量測點B_IN SH13,FB35) - VDDARM_IN  >>>>>  VDDARM_CAP - VDD_ARM_CAP(量測點B_OUT FB38)
+	Speed(現在速度) : cat /sys/devices/system/cpu/cpu0/cpufreq/cpuinfo_cur_freq 
+	echo userspace > /sys/devices/system/cpu/cpu0/cpufreq/scaling_governor	(mode : userspace,interactive)
+	echo 996000 > /sys/devices/system/cpu/cpu0/cpufreq/scaling_setspeed	(freq : 996000,792000,396000)
+	
+2. kernel3.0.35: 設定kernel-imx/arch/arm/mach-mx6/cpu_op-mx6.c
+	/* working point(wp): */
+	/*0 - 1.2GHz */
+	.soc_voltage = 1275000,				.soc_voltage = 1275000,
+	.cpu_voltage = 1275000,				.cpu_voltage = 1275000,
+	/*1 - 996MHz */
+	.soc_voltage = 1250000,				.soc_voltage = 1250000,
+	.cpu_voltage = 1250000,				.cpu_voltage = 1250000,
+	/*2 - 792MHz */
+	.soc_voltage = 1175000,				.soc_voltage = 1175000,
+	.cpu_voltage = 1150000,		======>		.cpu_voltage = 1175000,
+	/*3 - 396MHz */
+	.soc_voltage = 1175000,				.soc_voltage = 1175000,
+	.cpu_voltage = 950000,		======>		.cpu_voltage = 975000,
+
+3. 透過userspace去切換速度
+	Speed : 996MHz 
+	A_IN :  1.250 V	=> A_OUT : 1.226 V	A_IN :  1.250 V	=> A_OUT : 1.225 V
+	B_IN :  1.252 V	=> B_OUT : 1.252 V	B_IN :  1.252 V	=> B_OUT : 1.252 V
+
+	Speed : 792MHz 
+	A_IN :  1.175 V	=> A_OUT : 1.154 V	A_IN :  1.175 V	=> A_OUT : 1.152 V
+	B_IN :  1.151 V	=> B_OUT : 1.152 V	B_IN :  1.177 V	=> B_OUT : 1.177 V
+
+	Speed : 396MHz 
+	A_IN : 1.175 V	=> A_OUT : 1.153 V	A_IN : 1.175 V	=> A_OUT : 1.153 V
+	B_IN : 0.950 V	=> B_OUT : 0.951 V	B_IN : 0.975 V	=> B_OUT : 0.975 V
 
 
+4. 變更為異常電壓 : 單一板端開關機測試
+	實驗1, (default = 0.95)
+	396MHz .cpu_voltage = 0.80  時, 測試無法開機. 
+	實驗2, 
+	396MHz .cpu_voltage = 0.85  時, 測試 1 小時共 60 次開機(ON/OFF=45/15 sec) :  PASS
+	實驗3,
+	396MHz .cpu_voltage = 0.825 時, 測試 1 小時共 60 次開機(ON/OFF=45/15 sec) :  PASS
+	實驗4, (default = 1.15)
+	792MHz .cpu_voltage = 1.000 時, 測試無法開機. 
+	實驗5,
+	792MHz .cpu_voltage = 1.050 時, 測試 1 小時共 60 次開機(ON/OFF=45/15 sec) :  PASS
 
+Q7 MCU Release : VMCU到POWER ENABLE要花費1.1秒等待RTC clock
+	vRTC_Init( void )
+		while( !( CMU->STATUS & CMU_STATUS_LFXORDY ) ) ;
+	因為等待	CMU_STATUS/LFXORDY : LFXO is enabled and start-up time has exceeded.
+		 	CMU_CTRL/LFXOTIMEOUT : default = 0x3 (32768 cycle)
+	因此變更Timeout period
+			CMU_CTRL/LFXOTIMEOUT : 0 (8 cycle)
+	所以目前開機約100m sec, 即可以 POWER ENABLE 
 
+Q7 : 3.14.28  系統Install
+	- sudo dd if=/dev/zero of=/dev/sdc bs=1M count=64		(p0 = 64M)
+	- sudo dd if=u-boot.imx of=/dev/sdc bs=1024 seek=1
+	- sudo dd if=/dev/zero of=/dev/sdc bs=512 seek=24576 count=10
+	- sudo dd if=uImage of=/dev/sdc bs=1024 seek=13312
+	- sudo dd if=imx6q-rtx-q7.dtb of=/dev/sdc bs=1024 seek=12800
+	- sudo fdisk /dev/sdc	- "131072"(64M) - "+3200M"
+	- sudo mkfs.ext4 -j -L Q7_Ubuntu /dev/sdc1
+	- sudo tar --numeric-owner -pjxvf ubuntu-rootfs.tar.bz2 -C /media/rtx-3110/Q7_Ubuntu/
+啟動流程 :
+	- /etc/inittab  	-> 	/etc/rc.d/rcS  	-> 	/etc/rc.d/rc_mxc.S
+	- .autologin	->	.profile	->	/etc/init.d/update
+Q7 : mksd 
+	- ./mk_update_sd -e u-boot
 
+Q7 : uboot-rtx + linux-rtx(3.14.28)		
+	- update 到 server 
+		
+Q7 : ubuntu 帳號密碼 rtx/admin
 
+Q7 : hangup
+	- end_request: I/O error, dev mtdblock0, sector 0
+	- Buffer I/O error on device mtdblock0, logical block 0
+	去關閉kernel menuconfig : 
+		< > Memory Technology Device (MTD) support  ---
+	
+/*------------------------------------------------------------------------------------20170622*/
+ADLINK-ABB B10	: 技轉 PCBA 測試
+	採用20161207的測試程式.
+/*------------------------------------------------------------------------------------20170627*/
+PICO-B21 : EMS & Chamber 測試
+	1. EMS_20170627 
+	2. 溫測變更
+		u-boot-imx/drivers/thermal/imx_thermal.c (U-boot 2015.04)
+			thermal threshold : (溫度高於80,無法開機)
+			#define TEMPERATURE_MIN		-40
+			#define TEMPERATURE_HOT		285
+			#define TEMPERATURE_MAX		325	
+		kernel/drivers/thermal/imx_thermal.c
+			imx_get_sensor_data :
+				imx_temp_passive_max = 300000
 
+/*------------------------------------------------------------------------------------20170628*/
+Q7 : uboot 2015.04 + kernel 4.1.15 + Debian
+	- 1. uboot-rtx
+	- 2. linux-rtx
+	- 3. debian-8.5-minimal-armhf-2016-06-14.tar.xz
+		sudo mkfs.ext4 -j -L Q7_Debian /dev/sdc1
+		tar Jxvf debian-8.5-minimal-armhf-2016-06-14.tar.xz -C /media/rtx-3110/Q7_Debian/
+	- 4. Debian 卡住
+		[  OK  ] Started Update UTMP about System Runlevel Changes.
+		[ TIME ] Timed out waiting for device sys-subsystem-net-devices-eth0.device.
+		>>>>check console :	General setup  --->  [*] open by fhandle syscalls (Solved)
+	- 5. 更新
+		apt-get update
+		apt-get upgrade ..469MByte
+	- 6. 安裝 ->
+		apt-get install dpkg-dev
+		apt-get install xserver-xorg-core
+		apt-get install xinit
+/*------------------------------------------------------------------------------------20170704*/
+與icom 及 lineox3 開會
+	- 上午 metting 寺口宏x3(電子) + 機構x3 
+	- 下午 metting 寺口宏x3(電子) + 品保x2 + 海洋x2
 
+(B)(C)(J)(M) 
+	- 移除PMIC detect
+	- 焊接不良,錫裂
+	- 溫度異常.
 
+/*------------------------------------------------------------------------------------20170710*/
+Q7 - 3.0.35 
+	1. Mp 添加 溫度sensor測試 (20-60度)
+		- Q7 - Ibase - 12 (QC12.exe)
+		- MP_Test_170710
+	2. LDO bypassed : 變更 (arch/arm/mach-mx6/cpu_op-mx6.c)
+		- 792MHZ VDD_ARM_IN : 1175000
+		- 396MHZ VDD_ARM_IN : 975000
+	3. 變更uboot參數 : Check (arch/arm/mach-mx6/cpu.c)
+	 	- ldo_active=on (cpu regulator mode:ldo_enable) 
+		- ldo_active=off (cpu regulator mode:ldo_bypass)
+	4. ldo_enable 電壓設定 Input 1.375V (arch/arm/mach-mx6/mx6q_q7_pmic_pfuze100.c)
+		- Output : mx6q_cpu_op_1G + 25mv
+	5. ldo_bypass 電壓設定
+		- Input : mx6q_cpu_op_1G
+		- Output : 
+			- cpu_voltage out相同
+			- soc_voltage : mx6q_cpu_op_1G - 25mv
+/*------------------------------------------------------------------------------------20170711*/
+PICO B21 - upgrade - uboot 2015.04 + kernel 4.1.15.2.0.0 + ubuntu 14.04
+	1. 重新測試PCBA function.
+		- UART	(Ok)
+		- WIFI	(Ok)
+		- BT	(Ok)
+		- 所有重新驗證, CAN(?)
+	2. mp-tools
+	3. EMS, Chamber, mksd,
+	4. gpu, vpu
+		- imx-gpu-viv-5.0.11.p8.6-hfp.bin
+		- firmware-imx-5.4.bin
+		- imx-codec-4.1.4.bin
+		- imx-parser-4.1.4.bin 
+		- imx-vpu-5.4.35.bin
+		- imx-vpuwrap-1.0.68.bin
+	5. GPU/ VPU OK!!!
+/*------------------------------------------------------------------------------------20170713*/
+git tag
+	- git push --tags (將tag一次上傳)
+	- git tag -d ABB-B10 (delet local tag ABB-B10)
+	- git push origin :refs/Tag/ABB-B10 (delete remote tag ABB-B10) 沒權限
+	- git tag -l (tag list)
 
+/*------------------------------------------------------------------------------------20170713*/
+PICO-B21 mp-tools (uboot 2015.04 + kernel 4.1.15.2.0.0 + ubuntu 14.04)
+	1. mp-tools 播放當掉 :uart1 hangup : ping define的設定, 變更設定與uart5一致, M0/M1/TM define - 可解
+	2. gpio - 變更檔案位置
+	3. can0 電壓無輸出. 
+	4. 設定can0_standby Gpio1_5 + i2c 外接 + i2c Hdmi = 當在 " Starting kernel ... "
 
+early print :
+	[*] Kernel low-level debugging functions (read help!) 
+		Kernel low-level debugging port (i.MX6Q/DL Debug UART)  ---> 
+	(1) i.MX Debug UART Port Selection
+	[*] Early printk 
+	=> 發現 當在不同地方
+		" mxc_sdc_fb fb@1: registered mxc display driver ldb "
+	拿掉rtx-imx6q-soc.dtsi的ldb: ldb@020e0008 { 以下相關設定,
+		lvds-channel1/ lvds-channel2
+		-	#address-cells = <1>;
+		-	#size-cells = <0>;
+	就沒問題!!
+Release MP-tools, PFT, Mksd	
+/*------------------------------------------------------------------------------------20170720*/
+u-boot-imx/drivers/thermal/imx_thermal.c (U-boot 2015.04)
+	thermal threshold : (溫度高於80,無法開機)
+	#define TEMPERATURE_MIN		-40
+	#define TEMPERATURE_HOT		285
+	#define TEMPERATURE_MAX		325
+kernel/drivers/thermal/imx_thermal.c 4.1.15_2.0.0.ga : thermal test 設定
+	#define IMX_TEMP_PASSIVE		285000
 
+/*------------------------------------------------------------------------------------20170721*/
+提供HW ldo-enable  及 ldo-bypass Mode 作相關比較
+&gpc {
+	fsl,ldo-bypass = <1>; /* use ldo-bypass, u-boot will check it and configure */
+	fsl,wdog-reset = <2>; /* watchdog select of reset source */
+};
+&cpu0 {
+	arm-supply = <&sw1a_reg>;
+	soc-supply = <&sw1c_reg>;
+};
 
+/*------------------------------------------------------------------------------------20170724*/
+Q7 : uboot 2015.04 + kernel 4.1.15_2.0.0 + Debian 8.X 系統Install 整理後!!
+	- sudo dd if=/dev/zero of=/dev/sdc bs=1M count=64		(p0 = 64M)
+	- sudo dd if=/dev/zero of=/dev/sdc bs=512 seek=24576 count=10
+	- sudo dd if=u-boot.imx of=/dev/sdc bs=1024 seek=1
+	- sudo dd if=rtx-imx6q-q7.dtb of=/dev/sdc bs=1024 seek=12800
+	- sudo dd if=uImage of=/dev/sdc bs=1024 seek=13312
+	- sudo fdisk /dev/sdc	- "131072"(64M) - "+3300M"
+	- sudo mkfs.ext4 -j -L Q7_Debian /dev/sdc1
+	- sudo tar --numeric-owner -pJxvf Debian8-x11-base-gpu-2016-08-05.tar.xz -C /media/rtx-3110/Q7_Debian/
+	- sudo tar -xpf Q7_Debian_8x.tar -C /media/rtx-3110/Q7_Debian/
+	
+	0. uboot parameter lvds輸出 : RGB24 -> RGB666
+	1. apt-get update/upgrade, (記得接網路_有IP,才能更新)
+	2. apt-get install dpkg-dev autoconf make autopoint libtool pkg-config bison flex gtk-doc-tools libglib2.0-dev libasound-dev x264 libtool-bin libx11-dev git
+	3. apt-get install libgstreamer-plugins-base1.0-dev gstreamer1.0-tools gstreamer1.0-alsa gstreamer1.0-plugins-good gstreamer1.0-plugins-bad gstreamer1.0-libav
+	4. freescale library :
+		- firmware-imx-5.4
+			cp -avrf firmware /lib/
+		- imx-vpu-5.4.35
+			make PLATFORM=IMX6Q all && make install
+		- imx-codec-4.1.6
+			./autogen.sh --prefix=/usr && make all && make DESTDIR=/ install 
+		- imx-gpu-viv-5.0.11.p8.6-hfp
+			cp -avrf * /
+		- git clone git://github.com/Freescale/libimxvpuapi.git 
+			./waf configure --prefix=/usr 
+			./waf
+			./waf install 
+		- git clone git://github.com/Freescale/gstreamer-imx.git
+			./waf configure --prefix=usr --kernel-headers=/usr/include
+			./waf
+			./waf install
+			cp usr/lib/gstreamer-1.0/libgstimxipu.so /usr/lib/arm-linux-gnueabihf/gstreamer-1.0/
+			cp usr/lib/gstreamer-1.0/libgstimxvpu.so /usr/lib/arm-linux-gnueabihf/gstreamer-1.0/
+			cp usr/lib/gstreamer-1.0/libgstimxeglvivsink.so /usr/lib/arm-linux-gnueabihf/gstreamer-1.0/
+			cp usr/lib/libgstimxcommon.so.0.12.3 /usr/lib/
+			cd /usr/lib
+			ln -s libgstimxcommon.so.0.12.3 libgstimxcommon.so.0.9.5
+			ln -s libgstimxcommon.so.0.9.5 libgstimxcommon.so.0
+			ln -s libgstimxcommon.so.0.9.5 libgstimxcommon.so
+	5. 執行
+		- startx &
+		- export DISPLAY=:0
+		- gst-launch-1.0 playbin uri=file:///root/001.MP4 video-sink=aasink
+		- gst-launch-1.0 playbin uri=file:///root/001.MP4 video=mfw_v4lsink
+		- gst-launch-1.0 playbin uri=file:///root/001.MP4 video-sink="imxg2dvideosink framebuffer=/dev/fb0"
 
-
-
-
-
-
-
-
+/*------------------------------------------------------------------------------------20170724*/
+Graphics Version Check & function Check
+	1. dmesg | grep Galcore
+		Galcore version 5.0.11.41671
+	2. USB/OTG PWR/ OC/ 
+		有問題
+	3. RT2870 wifi
+		Device Drivers  --->  [*] Network device support  ---> [*]   Wireless LAN  --->   
+			<*>   Ralink driver support  --->  <*>   Ralink rt27xx/rt28xx/rt30xx (USB) support
+		[*] Networking support --->
+			[*] Wireless ---->
+				<*> cfg80211 - wireless configuration API
+				[*] cfg80211 wireless extensions compatibility
+		將 rt2870.bin 放在/lib/firmware中
+	4. Eth1 : SMSC9500
+		Device Drivers  ---> [*] Network device support  ---> 
+			<*>   USB Network Adapters  --->
+				<*>     SMSC LAN95XX based USB 2.0 10/100 ethernet devices
+	5. MIC :
+		apt-get install alsa-utils (aplay)
+		arecord -t wav -f cd -d 10 ./audio.wav
+		>>> alsa-utils-1.0.28_1 錄音有問題!! 變更安裝alsa-utils-1.1.3
+			- wget ftp://ftp.alsa-project.org/pub/utils/alsa-utils-1.1.3.tar.bz2
+			- tar xvjf alsa-utils-1.1.3.tar.bz2
+			- cd alsa-utils-1.1.3
+			- sudo apt-get install libncursesw5-dev
+			- ./configure --disable-alsaconf --disable-bat --disable-xmlto --with-curses=ncursesw
+			- make 
+			- make install
+			- arecord --version
+	6. canbus :
+		apt-get install can-utils
+			- ip link set can0 up type can bitrate 125000
+			- cansend can0 500#99.31.10 
+			- candump -T 5000 can0
+	7. bluetooth :
+		apt-get install bluez
+			- wifi rtl8821 configure
+			- 安裝bluez後, [FAILED] Failed to start Hostname Service.
+	8. 3-AXIS :
+		cat /sys/class/input/input1/name  (device = mma845x)
+		echo 1 > /sys/class/input/input1/enable
+		echo 1 > /sys/class/input/input1/position
+		hexdump -C -n 256 /dev/input/event1 | grep ' 03 00 00 ' | awk '{print$16$15$14}' | sed q
+		hexdump -C -n 256 /dev/input/event1 | grep ' 03 00 01 ' | awk '{print$16$15$14}' | sed q
+		hexdump -C -n 256 /dev/input/event1 | grep ' 03 00 02 ' | awk '{print$16$15$14}' | sed q
+	9. SPI :
+		mount -t jffs2 /dev/mtdblock0 /mnt/mtdblock0 
+	10. gpio-key :
+		- cat /dev/input/by-path/platform-gpio-keys-event
+		- hexdump -C /dev/input/event2
+		- out/include/linux/input.h
+			KEY_VOLUMEDOWN	0x72	
+			KEY_VOLUMEUP	0x73
+			KEY_POWER	0x74 	(sleep)
+			KEY_HOME	0x66
+			KEY_BACK	0x9E
+		- check
+			hexdump -C -n 64 /dev/input/event2 | grep ' 01 00 9e '
+	11. 3G : 
+		找不到 /dev/tty
+		- kernel configure setting -> OK!
+		- apt-get install wvdial
+	12. Ping define issue (uboot)
+		LVDS1_BLT_CTRL -> 其實是 UHUB_PWR1 且要High, USBDN_PWR1才會work!!
+		PCIE_DIS_B -> gpio_direction_output(IMX_GPIO_NR(7, 11) , 1); PCIE - Wifi才會Work!!
+/*------------------------------------------------------------------------------------20170802*/
+Q7 : mp-tools 
+	1. apt-get install python-netifaces python-netaddr alsa-utils python-gi-dev libgtk-3-dev python-gst0.10-dev
+	2. 執行
+		- cd mp-tools 
+		- export DISPLAY=:0 
+		- startx &
+		- ./mp-tools
+	3. mp-tools
+		- # self.Player
+		- # setterm
+		- # TestAuto.py 一開始Check 先mark掉
 
 
 
@@ -1713,14 +2472,15 @@ Hardware information :
 	cat /proc/iomem		-	check iomem
 	static lshw
 yocto server 要update
-ntpdate or ntpdate-sync
+ntpdate or ntpdate-sync 
+ntpdate time.stdtime.gov.tw
 uboot frequence / imx6 detail infomation
 gstreme..
 
 /*--------------------------------------------------------------------------------------------*/
 GAME 
 install libsdl2-mixer-2.0-0
-/*--------------------------------------------------------------------------------------------*/
+
 /*--------------------------------------------------------------------------------------------*/
 /*--------------------------------------------------------------------------------------------*/
 /*--------------------------------------------------------------------------------------------*/

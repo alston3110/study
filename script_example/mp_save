@@ -1,0 +1,86 @@
+#!/bin/bash
+. ./tools/info_config
+eth=eth0
+
+if [ -z $MP_Tools ]; then
+	MP_Tools="A0-000"
+fi
+
+Bsp_ver=$(cat /etc/version)
+if [ -z $Bsp_ver ]; then
+	Bsp_ver="----------"
+fi
+
+Mcu_ver=$(./tools/efm32cmd 2 12 -v | grep "Version" | awk 'sub(/Version:/,"")')
+if [ -z $Mcu_ver ]; then
+	Mcu_ver="--------"
+fi
+
+if [ $(ifconfig | grep $eth | wc -l) -eq 0 ]; then
+	ifconfig $eth up
+	sleep 5
+fi
+if [ $(ntpdate $ntpdaddr | grep "adjust time server" | wc -l) -eq 1 ]; then
+	Test_t1=$(date | awk '{print $6 "-" $2 "-" $3 "(" $1 ")"}')
+	time=$(date | awk '{print $4}')
+	time1=$(expr ${time:0:2} + 8)	#correct localtime
+	time2=${time:3:2}
+	time3=${time:6:2}
+	Test_time="$Test_t1 - $time1:$time2:$time3"	
+else
+	Test_time="--------"
+fi
+
+SN_number=$(./tools/rtx_setting -info | grep Serial: | awk 'sub(/Product Serial:/,"")')
+if [ -z $SN_number ]; then
+	SN_number="0000000000"
+fi
+
+MAC_number=$(./tools/rtx_setting -info | grep ubMAC00: | awk 'sub(/ubMAC00:/,"")' | awk '{print substr($0,1,17) }' | sed -e 's/://g')
+if [ -z $MAC_number ]; then
+	MAC_number="0000000000"
+fi
+
+Memory_size=$(cat /proc/meminfo | grep "MemTotal:" | awk '{print $2,$3 }')
+
+CPU_info=$(cat /proc/cpuinfo | grep Hardware | awk '{print $3,$4,$5,$6,$7 }')
+Speed=$(cpufreq-info | grep "available frequency steps" | sed q | awk '{print $8,$9 }')
+CPU_speed="$CPU_info $Speed"
+
+if [ -f tools/log/board.info ]; then
+	rm tools/log/board.info
+	sync
+fi
+echo -e "============================================================================\r" >> tools/log/board.info
+echo -e "MP Tools Version :\t$MP_Tools\r" >> tools/log/board.info
+echo -e "BSP Version :\t\t$Bsp_ver\r" >> tools/log/board.info
+echo -e "MCU Version :\t\t$Mcu_ver\r" >> tools/log/board.info
+echo -e "Test Date :\t\t$Test_time\r" >> tools/log/board.info
+echo -e "============================================================================\r" >> tools/log/board.info
+echo -e "Serial number :\t\t$SN_number\r" >> tools/log/board.info
+echo -e "MAC Address 1 :\t\t$MAC_number\r" >> tools/log/board.info
+echo -e "Memory Size :\t\t$Memory_size\r" >> tools/log/board.info
+echo -e "CPU Speed :\t\t$CPU_speed\r" >> tools/log/board.info
+echo -e "============================================================================\r" >> tools/log/board.info
+sync
+
+sed -i '1 i/' $1
+sed -i '1 r tools/log/board.info' $1
+sed -i '1d' $1
+
+if [ -d /home/root/.mp-log ]; then
+	if [ -f mp_result.log ]; then
+		cp mp_result.log /home/root/.mp-log/
+		sync
+	fi
+fi
+
+if [ "$(ping -I $eth -c 3 $ftp_ip | grep $ftp_ip | wc -l)" -gt "2" ];then
+	ftpput -u $ftp_name -p $ftp_pw $ftp_ip $1 
+
+else
+	echo "can't ping ftp_ip"
+
+fi
+
+

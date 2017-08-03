@@ -1,0 +1,317 @@
+diff '--exclude=.*' -Naur main/c/i2ccmd.c main-count/c/i2ccmd.c
+--- main/c/i2ccmd.c	2017-06-16 15:32:18.789500887 +0800
++++ main-count/c/i2ccmd.c	2017-03-27 15:31:33.150004035 +0800
+@@ -43,6 +43,10 @@
+ 	3 + 16 , // DEF_I2CCMD_MASTER_UPDATE_DATA
+ 	3 + 12 , // DEF_I2CCMD_MASTER_UPDATE_FINISH
+ 	3      , // DEF_I2CCMD_MASTER_GET_WHORUN
++	3 + 2  , // DEF_I2CCMD_MASTER_SET_WDOG
++	3 + 1  , // DEF_I2CCMD_MASTER_SET_WDOG_RETRY
++	3 	   , // DEF_I2CCMD_MASTER_GET_WDOG_STATUS
++	3      , // DEF_I2CCMD_MASTER_GET_COUNT
+ } ;
+ 
+ /* ---------------------------------------------------------------------
+@@ -97,6 +101,28 @@
+ 	return ( 0 ) ;
+ }
+ 
++int iI2CCmd_SentCount( void )
++{
++	uint8_t u8McuCount[4] = { 0 } ;
++	uint8_t u8Loop ;
++	int     iPutIndex  ;
++	
++	u32Count = u32Count + 1;
++	u8McuCount[3] = u32Count >> 24;
++	u8McuCount[2] = (u32Count >> 16) & 0xff;
++	u8McuCount[1] = (u32Count >> 8) & 0xff;
++	u8McuCount[0] = u32Count & 0xff;
++
++	iPutIndex = DEF_I2CCMD_DATA ;
++	
++	for( u8Loop = 0 ; u8Loop < 4 ; u8Loop++ )
++	{
++		u8I2CSentData[iPutIndex++] = u8McuCount[u8Loop] ;
++	}
++	
++	return ( iI2CCmd_SetData( 4 ) ) ;
++}
++
+ int iI2CCmd_GetCalendar( CALENDAR* pCal )
+ {
+ 	uint8_t *pu8Adr    = (uint8_t *)pCal ;
+@@ -343,6 +369,27 @@
+ 	return ( iI2CCmd_SetData( 1 ) ) ;
+ }
+ 
++#ifdef DEF_COMMON_WDOG_FUNCTION
++int iI2CCmd_GetWdog_Status( void )
++{
++	uint8_t *pu8Adr ;
++	int     iIndex     = 0 ;
++
++	pu8Adr = (uint8_t *)&u32PowerWdogSetSec ;
++	for( iIndex = 0 ; iIndex < 2 ; iIndex++ )
++	{
++		u8I2CSentData[DEF_I2CCMD_DATA+iIndex] = pu8Adr[1 - iIndex] ;
++	}
++
++	u8I2CSentData[DEF_I2CCMD_DATA+iIndex] = (uint8_t) u32PowerWdogSetRetryCount;
++	iIndex++;
++	u8I2CSentData[DEF_I2CCMD_DATA+iIndex] = (uint8_t) u32PowerWdogRetryCount;
++	iIndex++;
++	return ( iI2CCmd_SetData( iIndex ) ) ;
++}
++
++#endif
++
+ void vI2CCmd_Process( void )
+ {
+ 	vI2C_TimeOut( ) ;
+@@ -400,7 +447,23 @@
+ 					break ;
+ 				case DEF_I2CCMD_MASTER_GET_WHORUN       :
+ 					u8I2CSentCmdLen = iI2CCmd_GetWhoRun( ) ;
++					break ;	
++            #ifdef DEF_COMMON_WDOG_FUNCTION
++				case DEF_I2CCMD_MASTER_SET_WDOG          :
++					vPower_SetWdog_Time(u8I2CRecvData[DEF_I2CCMD_DATA], u8I2CRecvData[DEF_I2CCMD_DATA + 1]) ;
++					u8I2CSentCmdLen = iI2CCmd_SentAck( ) ;
+ 					break ;
++				case DEF_I2CCMD_MASTER_SET_WDOG_RETRY    :
++						vPower_SetWdog_Times(u8I2CRecvData[DEF_I2CCMD_DATA]) ;
++						u8I2CSentCmdLen = iI2CCmd_SentAck( ) ;
++					break ;
++				case DEF_I2CCMD_MASTER_GET_WDOG_STATUS    :
++					u8I2CSentCmdLen = iI2CCmd_GetWdog_Status( ) ;
++					break ;
++            #endif
++				case DEF_I2CCMD_MASTER_GET_COUNT   	:
++					u8I2CSentCmdLen = iI2CCmd_SentCount( ) ;
++					break ;	
+ 				default:
+ 					u8I2CSentCmdLen = iI2CCmd_SentNAck( ) ;
+ 					break ;			
+diff '--exclude=.*' -Naur main/c/power.c main-count/c/power.c
+--- main/c/power.c	2017-06-16 15:32:18.817500886 +0800
++++ main-count/c/power.c	2017-03-27 17:50:56.193756935 +0800
+@@ -24,6 +24,7 @@
+ uint32_t u32PowerProcCount     = 0 ;
+ uint32_t u32PowerProcNextState = 0 ;
+ uint32_t u32PowerRTCCount      = 0 ;
++uint32_t u32Count ;
+ 
+ bool     bPowerCanOnFlag       = false ;
+ bool     bPowerStatus          = OFF   ;
+@@ -34,6 +35,15 @@
+ bool     bPowerButtonGet       = 0     ;
+ bool     bPowerButtonEvent     = 0     ;
+ 
++#ifdef DEF_COMMON_WDOG_FUNCTION
++	bool     bPowerWdogOnFlag      = DEF_COMMON_WDOG_ONOFF ;
++	uint32_t u32PowerWdogSetSec    = DEF_COMMON_WDOG_DEFAULT ;
++	uint32_t u32PowerWdogCount     = 0 ;
++
++	uint32_t u32PowerWdogSetRetryCount = DEF_COMMON_WDOG_RETRY_DEFAULT;
++	uint32_t u32PowerWdogRetryCount = 0;
++#endif
++
+ /* ---------------------------------------------------------------------
+  * Function
+ --------------------------------------------------------------------- */
+@@ -72,6 +82,30 @@
+ 	}
+ }
+ 
++#ifdef DEF_COMMON_WDOG_FUNCTION
++void vPower_SetWdog_Time( uint32_t u32hsec, uint32_t u32lsec )
++{
++	uint32_t u32Act = (u32hsec << 8) + u32lsec;
++	if(u32Act == 0){
++		bPowerWdogOnFlag = false;
++		u32PowerWdogCount = 0;
++		u32PowerWdogSetSec = u32Act;
++
++		u32PowerWdogRetryCount = 0;
++	}else{
++		u32PowerWdogCount = 0;
++		u32PowerWdogSetSec = u32Act;
++		bPowerWdogOnFlag = true;
++	}
++}
++
++void vPower_SetWdog_Times( uint32_t u32count )
++{
++	u32PowerWdogSetRetryCount = u32count;
++}
++
++#endif
++
+ void vPower_OffControl( void )
+ {
+ 	vGPIO_Write( DEF_GPIO_POR , LOW ) ;
+@@ -98,6 +132,13 @@
+ 		 */
+ 		if ( bPowerStatus == OFF )
+ 		{
++			#ifdef DEF_COMMON_WDOG_FUNCTION
++				bPowerWdogOnFlag = DEF_COMMON_WDOG_ONOFF;
++				u32PowerWdogCount = 0;
++				u32PowerWdogSetSec = DEF_COMMON_WDOG_DEFAULT;
++				u32PowerWdogSetRetryCount = DEF_COMMON_WDOG_RETRY_DEFAULT;
++				u32PowerWdogRetryCount = 0;
++			#endif
+ 			u32PowerProcState   = PROC_POWER_ON ;
+ 			u32PowerProcCount   = 0 ;
+ 			return ;
+@@ -120,6 +161,35 @@
+ 		return ;
+ 	}
+ 
++	#ifdef DEF_COMMON_WDOG_FUNCTION
++	if ( bPowerStatus )
++	{
++		u32PowerWdogCount ++ ;
++		if ((u32PowerWdogCount > ( u32PowerWdogSetSec * 5300 )) && bPowerWdogOnFlag)
++		{
++			u32PowerWdogRetryCount ++;
++			if(u32PowerWdogRetryCount > u32PowerWdogSetRetryCount){
++				u32PowerProcState     = PROC_POWER_OFF ;
++			}else{
++				u32PowerProcState     = PROC_POWER_RESET ;
++			}
++			u32PowerProcCount     = 0 ;
++			u32PowerProcNextState = 0 ;
++			u32PowerWdogCount = 0 ;
++			return ;
++		}
++	}
++	else
++	{
++		bPowerWdogOnFlag = false;
++		u32PowerWdogCount = 0;
++		u32PowerWdogSetSec = DEF_COMMON_WDOG_DEFAULT;
++		u32PowerWdogSetRetryCount = DEF_COMMON_WDOG_RETRY_DEFAULT;
++		u32PowerWdogRetryCount = 0;
++	}
++
++	#endif
++
+ }
+ 
+ void vPower_On( void )
+@@ -163,6 +233,13 @@
+ 
+ void vPower_Off( void )
+ {
++	#ifdef DEF_COMMON_WDOG_FUNCTION
++		bPowerWdogOnFlag = false;
++		u32PowerWdogCount = 0;
++		u32PowerWdogSetSec = DEF_COMMON_WDOG_DEFAULT;
++		u32PowerWdogSetRetryCount = DEF_COMMON_WDOG_RETRY_DEFAULT;
++		u32PowerWdogRetryCount = 0;
++	#endif
+ 	vPower_OffControl( ) ;
+ 	vPower_DefaultInit( ) ;
+ }
+@@ -211,6 +288,13 @@
+ 	{
+ 		if ( u32PowerProcCount >= DEF_POWER_BUTTON_POWER_ON_DETECTION_TIME )
+ 		{
++			#ifdef DEF_COMMON_WDOG_FUNCTION
++				bPowerWdogOnFlag = DEF_COMMON_WDOG_ONOFF;
++				u32PowerWdogCount = 0;
++				u32PowerWdogSetSec = DEF_COMMON_WDOG_DEFAULT;
++				u32PowerWdogSetRetryCount = DEF_COMMON_WDOG_RETRY_DEFAULT;
++				u32PowerWdogRetryCount = 0;
++			#endif
+ 			u32PowerProcState   = PROC_POWER_ON ;
+ 			u32PowerProcCount   = 0 ;
+ 		}
+@@ -219,6 +303,13 @@
+ 	{
+ 		if ( u32PowerProcCount >= DEF_POWER_BUTTON_POWER_OFF_DETECTION_TIME )
+ 		{
++		#ifdef DEF_COMMON_WDOG_FUNCTION
++			bPowerWdogOnFlag = false;
++			u32PowerWdogCount = 0;
++			u32PowerWdogSetSec = DEF_COMMON_WDOG_DEFAULT;
++			u32PowerWdogSetRetryCount = DEF_COMMON_WDOG_RETRY_DEFAULT;
++			u32PowerWdogRetryCount = 0;
++		#endif
+ 			u32PowerProcState   = PROC_POWER_OFF ;
+ 			u32PowerProcCount   = 0 ;
+ 		}
+@@ -233,8 +324,11 @@
+ 	}
+ 	
+ 	u32PowerProcCount ++ ;
++	#ifdef DEF_COMMON_WDOG_FUNCTION
++		u32PowerWdogSetSec = DEF_COMMON_WDOG_DEFAULT;
++	#endif
+ 	
+-	if ( u32PowerProcCount == ( DEF_COMMON_FOR_LOOP_TIME_1MS * 100 ) )
++	if ( u32PowerProcCount == ( DEF_COMMON_FOR_LOOP_TIME_1MS * 1000 ) )
+ 	{
+ 		u32PowerProcState   = PROC_POWER_ON ;
+ 		u32PowerProcCount   = 0 ;
+diff '--exclude=.*' -Naur main/h/common.h main-count/h/common.h
+--- main/h/common.h	2017-06-16 15:32:18.829500886 +0800
++++ main-count/h/common.h	2017-03-27 17:50:08.841758334 +0800
+@@ -12,7 +12,7 @@
+ 	/* ---------------------------------------------------------------------
+ 	* Define
+ 	--------------------------------------------------------------------- */
+-	#define SOFTWARE_VERSION 							{'w',17,4,07}
++	#define SOFTWARE_VERSION 							{'t',17,3,27}
+ 
+ 	#define HIGH 										1
+ 	#define LOW  										0
+@@ -32,6 +32,10 @@
+ 	#define DEF_COMMON_FOR_LOOP_TIME_1MS  				5
+ 	#define DEF_POWER_AC_IN_DETECTION_TIME  DEF_COMMON_FOR_LOOP_TIME_1MS * 100
+ 	
++	#define DEF_COMMON_WDOG_FUNCTION
++	#define DEF_COMMON_WDOG_DEFAULT 		            10
++	#define DEF_COMMON_WDOG_ONOFF	 		            true
++	#define DEF_COMMON_WDOG_RETRY_DEFAULT	 		    0
+ 	/* ---------------------------------------------------------------------
+ 	* Macro
+ 	--------------------------------------------------------------------- */
+diff '--exclude=.*' -Naur main/h/i2ccmd.h main-count/h/i2ccmd.h
+--- main/h/i2ccmd.h	2017-06-16 15:32:18.845500886 +0800
++++ main-count/h/i2ccmd.h	2017-03-27 13:38:50.378203853 +0800
+@@ -32,6 +32,11 @@
+ 	#define DEF_I2CCMD_MASTER_UPDATE_DATA	 	0x8B
+ 	#define DEF_I2CCMD_MASTER_UPDATE_FINISH	 	0x8C
+ 	#define DEF_I2CCMD_MASTER_GET_WHORUN	 	0x8D
++
++	#define DEF_I2CCMD_MASTER_SET_WDOG		0x8E
++	#define DEF_I2CCMD_MASTER_SET_WDOG_RETRY	0x8F
++	#define DEF_I2CCMD_MASTER_GET_WDOG_STATUS	0x90
++	#define DEF_I2CCMD_MASTER_GET_COUNT   		0x92
+ 	
+ 	#define DEF_I2CCMD_SLAVE_ACK				0xA0
+ 	#define DEF_I2CCMD_SLAVE_NACK				0xA1
+diff '--exclude=.*' -Naur main/h/power.h main-count/h/power.h
+--- main/h/power.h	2017-06-16 15:32:18.849500886 +0800
++++ main-count/h/power.h	2017-03-27 13:40:35.090200759 +0800
+@@ -13,8 +13,17 @@
+ 	EXTERN void vPower_DefaultInit( void ) ;
+ 	EXTERN void vPower_SetPowerNeedOn( void ) ;
+ 	EXTERN void vPower_SetAction( uint32_t u32Act ) ;
++	#ifdef DEF_COMMON_WDOG_FUNCTION
++		EXTERN void vPower_SetWdog_Time( uint32_t u32hsec, uint32_t u32lsec ) ;
++		EXTERN void vPower_SetWdog_Times( uint32_t u32times ) ;
++		EXTERN uint32_t u32PowerWdogSetSec;
++		EXTERN uint32_t u32PowerWdogSetRetryCount;
++		EXTERN uint32_t u32PowerWdogRetryCount;
++		EXTERN bool bPowerWdogOnFlag;
++	#endif
+ 	EXTERN void vPower_OffControl( void ) ;
+ 	EXTERN void vPower_Process( void ) ;
++	EXTERN uint32_t u32Count ;
+ 	
+ 	#undef EXTERN
+ #endif

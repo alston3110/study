@@ -1,0 +1,66 @@
+#!/bin/sh
+
+echo "Start PCBA_Function_Test = Test 3G "
+echo "Please keyin ping (ex:0000, or enter)"
+read ping
+DIR=$0
+CURDIR=${DIR%/*}
+
+result=0
+check_dev=ppp0
+dev_3g=ttyACM0
+debug_message=/dev/null
+LOCK_File=/tmp/3g_ping.lock
+
+if [ ! -z ${2} ]; then
+    dev_3g=${2}
+fi
+
+run_3g()
+{
+alldev=`ifconfig -a | grep ppp | awk '{print $1}'`
+
+for dev_name in ${alldev}
+do
+    if [ ${check_dev} = ${dev_name} ]; then
+        ifconfig ${check_dev} down
+        break
+    fi
+done
+
+alldev=`ps -e | grep "wvdial" | wc -l`
+if [ ${alldev} -ne 0 ]; then
+    killall -9 wvdial
+fi
+
+alldev=`ps -e | grep "pppd" | wc -l`
+if [ ${alldev} -ne 0 ]; then
+    killall -9 pppd
+fi
+
+if [ ! -f ${LOCK_File} ] && [ ! -z ${ping} ]; then
+        sed -i '/AT+CPIN=/d'  $CURDIR/3G.conf
+        sed -i "/\[Dialer ping\]/a Init1 = AT+CPIN=\"$ping\"" $CURDIR/3G.conf
+        wvdial ping -C $CURDIR/3G.conf 2>/dev/null &
+        touch ${LOCK_File}
+        sleep 3
+else
+        wvdial Connect -C $CURDIR/3G.conf 2>/dev/null &
+fi
+
+sleep 15
+
+if [ "$(ifconfig ${check_dev} | awk 'sub(/inet addr:/,""){print $1}' | wc -l)" -eq 1 ]; then
+    result=1
+fi
+}
+#} > ${debug_message}
+
+run_3g
+
+if [ ${result} -gt 0 ]; then
+    echo "3G port=${dev_3g} : PASS"
+else
+    echo "3G port=${dev_3g} : FAIL"
+fi
+

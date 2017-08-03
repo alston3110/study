@@ -1,0 +1,55 @@
+#!/bin/bash
+. ./tools/info_config
+eth=eth0
+
+if [ -z $MP_Tools ]; then
+	MP_Tools="A0-000"
+fi
+
+if [ $(ifconfig | grep $eth | wc -l) -eq 0 ]; then
+	ifconfig $eth up
+	sleep 5
+fi
+if [ $(ntpdate $ntpdaddr | grep "adjust time server" | wc -l) -eq 1 ]; then
+	Test_t1=$(date | awk '{print $6 "-" $2 "-" $3 "(" $1 ")"}')
+	time=$(date | awk '{print $4}')
+	time1=$(expr ${time:0:2} + 8)	#correct localtime
+	time2=${time:3:2}
+	time3=${time:6:2}
+	Test_time="$Test_t1 - $time1:$time2:$time3"	
+else
+	Test_time="--------"
+fi
+
+SN_number=$(./tools/rtx_setting -info | grep Serial: | awk 'sub(/Product Serial:/,"")')
+if [ -z $SN_number ]; then
+	SN_number="0000000000"
+fi
+
+MAC_number=$(./tools/rtx_setting -info | grep ubMAC00: | awk 'sub(/ubMAC00:/,"")' | awk '{print substr($0,1,17) }' | sed -e 's/://g')
+if [ -z $MAC_number ]; then
+	MAC_number="0000000000"
+fi
+
+Memory_size=$(cat /proc/meminfo | grep "MemTotal:" | awk '{print $2,$3 }')
+
+CPU_info=$(cat /proc/cpuinfo | grep Hardware | awk '{print $3,$4,$5,$6,$7 }')
+Speed=$(cpufreq-info | grep "available frequency steps" | sed q | awk '{print $8,$9 }')
+CPU_speed="$CPU_info $Speed"
+
+echo "============================================================================"
+echo "MP Tools Version :	$MP_Tools"
+echo "Test Date :		$Test_time"
+echo "============================================================================"
+echo "Serial number :		$SN_number"
+echo "MAC Address 1 :		$MAC_number"
+echo "Memory Size :		$Memory_size"
+echo "CPU Speed :		$CPU_speed"
+echo "============================================================================"
+
+#every good
+#awk '{print substr($1,1,1)}' temp   #returns e
+#awk '{print substr($1,3)   }' temp   #returns ery
+#awk '{print substr($2,3)   }' temp   #returns od
+#awk '{print substr($0,7,2) }' temp  #returns go
+

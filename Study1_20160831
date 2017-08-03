@@ -21,6 +21,7 @@ export CROSS_COMPILE=
 (Xfce4 - SMARC)		arm-linux-gnueabihf-
 (Linux - SMARC)		arm-linux-gnueabi-
 (linux-imx-3.10.x)	/opt/freescale/usr/local/gcc-linaro-arm-linux-gnueabihf-4.8-2014.04_linux/bin/arm-linux-gnueabihf-
+(Adlink)		/opt/cross/rtx-gcc-4.9.3-glibc-2.19-hf-64bits/arm-rtx-linux-gnueabihf/bin/arm-rtx-linux-gnueabihf-
 
 Ubuntu分享cmd:
 sudo mount -t vboxsf Share /home/retronix/work/Linux/Share
@@ -3685,6 +3686,7 @@ sudo grub-install /dev/sdb
 kernel config setting
 	Device Drivers  --->
 		[*] USB support  --->
+			<*>     USB Modem (CDC ACM) support
 			<*>   USB Serial Converter support  --->
 				[*]   USB Generic Serial Driver
 				<*>   USB driver for GSM and CDMA modems
@@ -4652,6 +4654,7 @@ KERNEL_DTB=imx6dl-sabresd.dtb
 
 2. PCI hangup issue (modify as below)
 	dts/imx6q-rtx-pitx-soc.dtsi
+	intc: interrupt-controlle 拿掉
 	-		#address-cells = <1>;
 	-		#size-cells = <1>;
 

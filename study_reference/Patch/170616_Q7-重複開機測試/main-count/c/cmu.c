@@ -1,0 +1,13 @@
+#define DEF_IS_CMU_C
+#include "common.h"
+
+void vCMU_Init( void )
+{
+	uint8_t u8Tuning ;
+	
+	CMU->HFRCOCTRL = ( (CMU->HFRCOCTRL & ~_CMU_HFRCOCTRL_BAND_MASK) | CMU_HFRCOCTRL_BAND_1MHZ ) ;
+	u8Tuning       = ( DEVINFO->HFRCOCAL0 & _DEVINFO_HFRCOCAL0_BAND1_MASK ) >> _DEVINFO_HFRCOCAL0_BAND1_SHIFT ;
+	CMU->HFRCOCTRL = ( CMU->HFRCOCTRL & ~_CMU_HFRCOCTRL_TUNING_MASK ) | u8Tuning ;
+}
+
+

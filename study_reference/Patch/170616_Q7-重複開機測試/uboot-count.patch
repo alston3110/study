@@ -1,0 +1,571 @@
+diff '--exclude=.*' -Naur u-boot/board/freescale/mx6q_q7/mx6q_q7.c u-boot-count/board/freescale/mx6q_q7/mx6q_q7.c
+--- u-boot/board/freescale/mx6q_q7/mx6q_q7.c	2017-03-27 17:41:39.021773398 +0800
++++ u-boot-count/board/freescale/mx6q_q7/mx6q_q7.c	2017-03-27 14:48:44.482079931 +0800
+@@ -112,6 +112,10 @@
+ unsigned short colormap[16777216];
+ #endif
+ 
++#ifdef CONFIG_MCU_WDOG
++extern void mcu_wdog_uboot();
++#endif
++
+ static struct pwm_device pwm0 = {
+ 	.pwm_id = 0,
+ 	.pwmo_invert = 0,
+@@ -1786,6 +1790,9 @@
+ 	#ifdef CONFIG_I2C_MXC
+ 	setup_i2c(CONFIG_SYS_I2C_PORT);
+ 	i2c_bus_recovery();
++	#ifdef CONFIG_MCU_WDOG
++		mcu_wdog_uboot();	//modify watch dog timer.
++	#endif
+ 	ret = setup_pmic_voltages();
+ 	if (ret)
+ 		return -1;
+diff '--exclude=.*' -Naur u-boot/build_q7.sh u-boot-count/build_q7.sh
+--- u-boot/build_q7.sh	1970-01-01 08:00:00.000000000 +0800
++++ u-boot-count/build_q7.sh	2017-03-27 14:38:20.794098359 +0800
+@@ -0,0 +1,106 @@
++#! /bin/sh
++
++set -e
++
++TOP=`pwd`
++export ARCH=arm
++
++# =====================================
++# Cross compile tools path define 
++# default path is /opt/cross if not define CROSS_COMPILE_PATH
++# =====================================
++#CROSS_COMPILE_PATH=/home/artie/JOB-Area/Android
++#CROSS_COMPILE_PATH=/opt/freescale/usr/local
++#CROSS_COMPILE_PATH=/media/tom/ext1t/freescale/cross-compile
++if [ -z $CROSS_COMPILE_PATH ];then
++CROSS_COMPILE_PATH=/opt/cross
++fi
++
++# =====================================
++# Cross compile tools version
++# =====================================
++#export CROSS_COMPILE=${CROSS_COMPILE_PATH}/gcc-4.8.5-glibc-2.23/arm-fsl-linux-gnueabi/bin/arm-fsl-linux-gnueabi-
++export CROSS_COMPILE=${CROSS_COMPILE_PATH}/rtx-gcc-4.9.3-glibc-2.19-hf-64bits/arm-rtx-linux-gnueabihf/bin/arm-rtx-linux-gnueabihf-
++#export CROSS_COMPILE=${CROSS_COMPILE_PATH}/rtx-gcc-4.9.3-glibc-2.23-hf-64bits/arm-rtx-linux-gnueabihf/bin/arm-rtx-linux-gnueabihf-
++#export CROSS_COMPILE=${CROSS_COMPILE_PATH}/rtx-gcc-4.9.3-glibc-2.23-hf/arm-rtx-linux-gnueabihf/bin/arm-rtx-linux-gnueabihf- 
++#export CROSS_COMPILE=${CROSS_COMPILE_PATH}/rtx-gcc-5.3.0-glibc-2.23-hf/arm-rtx-linux-gnueabihf/bin/arm-rtx-linux-gnueabihf-
++#export CROSS_COMPILE=${CROSS_COMPILE_PATH}/prebuilts/gcc/linux-x86/arm/arm-eabi-4.6/bin/arm-eabi-
++
++# =====================================
++# Configue file select
++# =====================================
++#ADLINK Board
++U_BOOT_DEFAULT_CONFIG=mx6q_q7_config
++
++# A6 PLUS board
++#U_BOOT_DEFAULT_CONFIG=rtx_a6plus_mx6q_micro1g_null_roymark_tv_android_defconfig
++#U_BOOT_DEFAULT_CONFIG=rtx_a6plus_mx6q_micro1g_null_roymark_box_android_defconfig
++#U_BOOT_DEFAULT_CONFIG=rtx_a6plus_mx6q_micro1g_dtb_rtx_box_android_defconfig
++#U_BOOT_DEFAULT_CONFIG=rtx_a6plus_mx6q_micro1g_dtb_rtx_all_linux_defconfig
++
++#A6 Board
++#U_BOOT_DEFAULT_CONFIG=rtx_a6_mx6q_micro1g_null_roymark_box_android_defconfig
++#U_BOOT_DEFAULT_CONFIG=rtx_a6_mx6q_micro1g_dtb_rtx_all_android_defconfig
++#U_BOOT_DEFAULT_CONFIG=rtx_a6_mx6q_micro1g_dtb_rtx_all_linux_defconfig
++
++#PITX Board
++#U_BOOT_DEFAULT_CONFIG=rtx_pitx_mx6q_nanya1g_mfg_defconfig
++#U_BOOT_DEFAULT_CONFIG=rtx_pitx_mx6q_nanya1g_dtb_rtx_all_android_defconfig
++#U_BOOT_DEFAULT_CONFIG=rtx_pitx_mx6q_nanya2g_dtb_rtx_all_android_defconfig
++#U_BOOT_DEFAULT_CONFIG=rtx_pitx_mx6q_nanya1g_dtb_rtx_all_linux_defconfig
++#U_BOOT_DEFAULT_CONFIG=rtx_pitx_mx6q_nanya2g_dtb_rtx_all_linux_defconfig
++
++#Q7 Board
++#U_BOOT_DEFAULT_CONFIG=rtx_q7_mx6q_issi1g_dtb_rtx_all_android_defconfig
++#U_BOOT_DEFAULT_CONFIG=rtx_q7_mx6q_issi1g_dtb_rtx_all_mfg_defconfig
++
++#Volar111Plus Board
++#U_BOOT_DEFAULT_CONFIG=rtx_volar111plus_mx6dl_samsung1g_dtb_rtx_all_mfg_defconfig
++#U_BOOT_DEFAULT_CONFIG=rtx_volar111plus_mx6dl_samsung1g_dtb_rtx_all_linux_defconfig
++#U_BOOT_DEFAULT_CONFIG=rtx_volar111plus_mx6dl_samsung1g_null_rtx_all_linux_defconfig
++#U_BOOT_DEFAULT_CONFIG=rtx_volar111plus_mx6dl_samsung1g_dtb_rtx_all_android_defconfig
++
++#TreadMill Board
++#U_BOOT_DEFAULT_CONFIG=rtx_treadmill_mx6q_samsung2g_dtb_rtx_all_android_defconfig
++#U_BOOT_DEFAULT_CONFIG=rtx_treadmill_mx6q_samsung2g_dtb_rtx_all_mfg_defconfig
++
++# Get Host Number of CPUs
++CPUS=`cat /proc/cpuinfo | grep processor | wc -l`
++
++if [ ! -d out ] ; then
++	mkdir -p out
++fi
++
++case "${1}" in
++	"all")
++		#rm -rf out
++		#mkdir -p out
++		make ${U_BOOT_DEFAULT_CONFIG}
++		make -j${CPUS}
++		cp -f u-boot.bin out/.
++		;;
++	"config")
++		make ${U_BOOT_DEFAULT_CONFIG}
++		;;
++	"menuconfig")
++		make menuconfig
++		;;
++	"clean")
++		make clean
++		;;
++	"distclean")
++		make distclean
++		#rm -rf out/u*
++		;;
++	"tools")
++		cd RTX/tools
++		make clean
++		make
++		cd -
++		;;
++
++	*) 
++		echo "${0} [all/clean/disclean]"
++		#exit 1
++		;;
++esac
+diff '--exclude=.*' -Naur u-boot/common/bootsel.c u-boot-count/common/bootsel.c
+--- u-boot/common/bootsel.c	2017-03-27 17:41:39.093773396 +0800
++++ u-boot-count/common/bootsel.c	2017-03-27 14:51:57.466074229 +0800
+@@ -37,6 +37,10 @@
+ extern int usb_get_stor_dev( void ) ;
+ #endif
+ 
++#ifdef CONFIG_MCU_WDOG
++extern void mcu_wdog_disable();
++#endif
++
+ typedef struct __BOOTSEL_INFO__ {
+ 	unsigned long ulCheckCode ;
+ 	unsigned char ubMagicCode[16] ;
+@@ -164,7 +168,9 @@
+ 				setenv( "dev_num" , envstr ) ;
+ 				setenv( "ext_args" , CONFIG_BOOT_SYSTEM_EXTSD_RUN_ARGS ) ;
+ 				setenv( "bootcmd" , CONFIG_BOOT_SYSTEM_EXTSD_RUN_CMDS ) ;
+-
++				#ifdef CONFIG_MCU_WDOG
++					mcu_wdog_disable();	//disable mcu watch dog function.
++				#endif
+ 				run_command( "run bootcmd" , 0 ) ;
+ 				break ;
+ 			}
+@@ -194,7 +200,9 @@
+ 							setenv( "dev_num" , envstr ) ;
+ 							setenv( "ext_args" , CONFIG_BOOT_SYSTEM_EXTSD_RUN_ARGS ) ;
+ 							setenv( "bootcmd" , CONFIG_BOOT_SYSTEM_EXTSD_FAT_RUN_CMDS ) ;
+-
++							#ifdef CONFIG_MCU_WDOG
++								mcu_wdog_disable();	//disable mcu watch dog function.
++							#endif
+ 							run_command( "run bootcmd" , 0 ) ;
+ 							break ;
+ 						}
+@@ -230,7 +238,9 @@
+ 					setenv( "dev_num" , envstr ) ;
+ 					setenv( "ext_args" , CONFIG_BOOT_SYSTEM_UDISK_RUN_ARGS ) ;
+ 					setenv( "bootcmd" , CONFIG_BOOT_SYSTEM_UDISK_RUN_CMDS ) ;
+-
++					#ifdef CONFIG_MCU_WDOG
++						mcu_wdog_disable();	//disable mcu watch dog function.
++					#endif
+ 					run_command( "run bootcmd" , 0 ) ;
+ 				}
+ 			}
+@@ -259,7 +269,9 @@
+ 								setenv( "dev_num" , envstr ) ;
+ 								setenv( "ext_args" , CONFIG_BOOT_SYSTEM_UDISK_RUN_ARGS ) ;
+ 								setenv( "bootcmd" , CONFIG_BOOT_SYSTEM_UDISK_FAT_RUN_CMDS ) ;
+-
++								#ifdef CONFIG_MCU_WDOG
++									mcu_wdog_disable();	//disable mcu watch dog function.
++								#endif
+ 								run_command( "run bootcmd" , 0 ) ;
+ 							}
+ 						}
+@@ -464,7 +476,9 @@
+ 				setenv( "roption" , "normal" ) ;
+ 				setenv( "ext_args" , CONFIG_BOOT_SYSTEM_RDISK_RUN_ARGS ) ;
+ 				setenv( "bootcmd" , CONFIG_BOOT_SYSTEM_RDISK_RUN_CMDS ) ;
+-
++				#ifdef CONFIG_MCU_WDOG
++					mcu_wdog_disable();	//disable mcu watch dog function.
++				#endif
+ 				run_command( "run bootcmd" , 0 ) ;
+ 			}
+ 			break ;
+@@ -475,7 +489,9 @@
+ 				setenv( "roption" , "recovery" ) ;
+ 				setenv( "ext_args" , CONFIG_BOOT_SYSTEM_RDISK_RUN_ARGS ) ;
+ 				setenv( "bootcmd" , CONFIG_BOOT_SYSTEM_RDISK_RUN_CMDS ) ;
+-
++				#ifdef CONFIG_MCU_WDOG
++					mcu_wdog_disable();	//disable mcu watch dog function.
++				#endif
+ 				run_command( "run bootcmd" , 0 ) ;
+ 			}
+ 			break ;
+diff '--exclude=.*' -Naur u-boot/common/main.c u-boot-count/common/main.c
+--- u-boot/common/main.c	2017-03-27 17:41:39.105773395 +0800
++++ u-boot-count/common/main.c	2017-03-27 14:53:10.542072070 +0800
+@@ -471,6 +471,9 @@
+ #ifdef CONFIG_BOOT_SYSTEM_PASSWORD
+ 	bootsel_password();
+ #endif /*CONFIG_CHECK_PASSWORD*/
++#ifdef CONFIG_MCU_WDOG
++	mcu_wdog_disable();	//disable mcu watch dog function.
++#endif
+ 	/*
+ 	 * Main Loop for Monitor Command Processing
+ 	 */
+diff '--exclude=.*' -Naur u-boot/drivers/i2c/mxc_i2c.c u-boot-count/drivers/i2c/mxc_i2c.c
+--- u-boot/drivers/i2c/mxc_i2c.c	2017-03-27 17:41:39.217773392 +0800
++++ u-boot-count/drivers/i2c/mxc_i2c.c	2017-03-27 15:14:44.170033847 +0800
+@@ -286,4 +286,88 @@
+ 	return 0;
+ }
+ 
++static int i2c_addr_mcu(uchar chip, uchar* addr, int alen)
++{
++	int i, retry = 0;
++	for (retry = 0; retry < 3; retry++) {
++		if (wait_idle())
++			break;
++		i2c_reset();
++		for (i = 0; i < I2C_MAX_TIMEOUT; i++)
++			udelay(I2C_TIMEOUT_TICKET);
++	}
++	if (retry >= 3) {
++		printf("%s:bus is busy(%x)\n",
++		       __func__, __REG16(I2C_BASE + I2SR));
++		return -1;
++	}
++	__REG16(I2C_BASE + I2CR) = I2CR_IEN | I2CR_MSTA | I2CR_MTX;
++	if (!wait_busy()) {
++		printf("%s:trigger start fail(%x)\n",
++		       __func__, __REG16(I2C_BASE + I2SR));
++		return -1;
++	}
++	if (tx_byte(chip << 1) || (__REG16(I2C_BASE + I2SR) & I2SR_RX_NO_AK)) {
++		printf("%s:chip address cycle fail(%x)\n",
++		       __func__, __REG16(I2C_BASE + I2SR));
++		return -1;
++	}
++	while (alen--)
++		if (tx_byte((*(addr+alen )) & 0xff) ||
++		    (__REG16(I2C_BASE + I2SR) & I2SR_RX_NO_AK)) {
++			printf("%s:device address cycle fail(%x)\n",
++			       __func__, __REG16(I2C_BASE + I2SR));
++			return -1;
++		}
++	return 0;
++}
++
++int i2c_read_mcu(uchar chip, uchar* addr, int alen, uchar *buf, int len)
++{
++	int timeout = I2C_MAX_TIMEOUT;
++	uint ret;
++
++	DPRINTF("%s chip: 0x%02x addr: 0x%04x alen: %d len: %d\n",
++		__func__, chip, addr, alen, len);
++
++	if (i2c_addr_mcu(chip, addr, alen)) {
++		printf("i2c_addr failed\n");
++		return -1;
++	}
++
++	__REG16(I2C_BASE + I2CR) = I2CR_IEN | I2CR_MSTA | I2CR_MTX | I2CR_RSTA;
++
++	if (tx_byte(chip << 1 | 1) ||
++	    (__REG16(I2C_BASE + I2SR) & I2SR_RX_NO_AK)) {
++		printf("%s:Send 2th chip address fail(%x)\n",
++		       __func__, __REG16(I2C_BASE + I2SR));
++		return -1;
++	}
++	__REG16(I2C_BASE + I2CR) = I2CR_IEN | I2CR_MSTA |
++	    ((len == 1) ? I2CR_TX_NO_AK : 0);
++	DPRINTF("CR=%x\n", __REG16(I2C_BASE + I2CR));
++	ret = __REG16(I2C_BASE + I2DR);
++
++	while (len--) {
++		if (len == 0)
++			__REG16(I2C_BASE + I2CR) = I2CR_IEN | I2CR_MSTA |
++			    I2CR_TX_NO_AK;
++
++		if (rx_byte(&ret, len == 0) < 0) {
++			printf("Read: rx_byte fail\n");
++			return -1;
++		}
++		*buf++ = ret;
++	}
++
++	while (__REG16(I2C_BASE + I2SR) & I2SR_IBB && --timeout) {
++		__REG16(I2C_BASE + I2SR) = 0;
++		udelay(I2C_TIMEOUT_TICKET);
++	}
++	if (!timeout) {
++		printf("%s:trigger stop fail(%x)\n",
++		       __func__, __REG16(I2C_BASE + I2SR));
++	}
++	return 0;
++}
+ #endif				/* CONFIG_HARD_I2C */
+diff '--exclude=.*' -Naur u-boot/include/configs/mx6q_q7.h u-boot-count/include/configs/mx6q_q7.h
+--- u-boot/include/configs/mx6q_q7.h	2017-03-27 17:41:39.369773387 +0800
++++ u-boot-count/include/configs/mx6q_q7.h	2017-03-27 15:24:18.346016882 +0800
+@@ -161,6 +161,8 @@
+ #define CONFIG_SYS_MEMTEST_START	0x10000000	/* memtest works on */
+ #define CONFIG_SYS_MEMTEST_END		0x10010000
+ 
++#define CONFIG_MCU_WDOG		I2C3_BASE_ADDR
++
+ #undef	CONFIG_SYS_CLKS_IN_HZ		/* everything, incl board info, in Hz */
+ 
+ #define CONFIG_SYS_LOAD_ADDR		CONFIG_LOADADDR
+@@ -201,7 +203,7 @@
+ #ifdef CONFIG_CMD_I2C
+ 	#define CONFIG_HARD_I2C         1
+ 	#define CONFIG_I2C_MXC          1
+-	#define CONFIG_SYS_I2C_PORT             I2C2_BASE_ADDR
++	#define CONFIG_SYS_I2C_PORT             I2C3_BASE_ADDR
+ 	#define CONFIG_SYS_I2C_SPEED            100000
+ 	#define CONFIG_SYS_I2C_SLAVE            0x8
+ #endif
+diff '--exclude=.*' -Naur u-boot/lib_arm/board.c u-boot-count/lib_arm/board.c
+--- u-boot/lib_arm/board.c	2017-03-27 17:41:39.397773387 +0800
++++ u-boot-count/lib_arm/board.c	2017-03-27 17:20:08.553811527 +0800
+@@ -306,6 +306,183 @@
+ 	NULL,
+ };
+ 
++
++#ifdef CONFIG_MCU_WDOG
++//extern void i2c_bus(unsigned int module_base);
++void mcu_wdog_disable()
++{
++	unsigned char wbuf[6] = { 0 };
++	unsigned char buf[6] = { 0 };
++	unsigned char ucsum, retry = 0;
++	
++//	i2c_bus(I2C2_BASE_ADDR);
++	if (!i2c_probe(0x0C)) {
++retry:
++		wbuf[0] = 0x93;
++		wbuf[1] = 0x00;
++		wbuf[2] = 0x00;
++		wbuf[3] = 0x8E;
++		wbuf[4] = 0x05;
++		if (i2c_read_mcu(0x0C, wbuf, 5, buf, 3)) {
++			printf("%s:i2c_read:error\n", __func__);
++		}
++		else {
++			if(buf[0] == 3){
++				ucsum = buf[0] + buf[1];
++				printf("0x%02X, 0x%02X, 0x%02X", buf[0], buf[1], buf[2]);
++				if(buf[2] == ucsum && buf[1] == 0xA0){
++					printf("%s:i2c : Success\n", __func__);
++				}else{
++					retry++;
++					printf("%s:i2c : Fail, retry:%d\n", __func__, retry);
++					if(retry < 5)goto retry;
++				}
++			}else{
++				printf("%s:i2c : Fail, buf[0]:%d\n", __func__, buf[0]);
++			}
++		}
++	}
++
++//	i2c_bus(CONFIG_SYS_I2C_PORT);
++}
++
++void mcu_wdog_uboot()
++{
++	unsigned char wbuf[6] = { 0 };
++	unsigned char buf[6] = { 0 };
++	unsigned char ucsum, retry = 0;
++	
++	if (!i2c_probe(0x0C)) {
++retry:
++		wbuf[0] = 0xD3;
++		wbuf[1] = 0x40;
++		wbuf[2] = 0x00;
++		wbuf[3] = 0x8E;
++		wbuf[4] = 0x05;
++		if (i2c_read_mcu(0x0C, wbuf, 5, buf, 3)) {
++			printf("%s:i2c_read:error\n", __func__);
++		}
++		else {
++			if(buf[0] == 3){
++				ucsum = buf[0] + buf[1];
++				printf("0x%02X, 0x%02X, 0x%02X", buf[0], buf[1], buf[2]);
++				if(buf[2] == ucsum && buf[1] == 0xA0){
++					printf("%s:i2c : Success\n", __func__);
++				}else{
++					retry++;
++					printf("%s:i2c : Fail, retry:%d\n", __func__, retry);
++					if(retry < 5)goto retry;
++				}
++			}else{
++				printf("%s:i2c : Fail, buf[0]:%d\n", __func__, buf[0]);
++			}
++		}
++	}
++}
++
++void mcu_wdog_kernel()
++{
++	unsigned char wbuf[6] = { 0 };
++	unsigned char buf[6] = { 0 };
++	unsigned char ucsum, retry = 0;
++	
++	if (!i2c_probe(0x0C)) {
++retry:
++		wbuf[0] = 0x53;
++		wbuf[1] = 0xC0;
++		wbuf[2] = 0x00;
++		wbuf[3] = 0x8E;
++		wbuf[4] = 0x05;
++		if (i2c_read_mcu(0x0C, wbuf, 5, buf, 3)) {
++			printf("%s:i2c_read:error\n", __func__);
++		}
++		else {
++			if(buf[0] == 3){
++				ucsum = buf[0] + buf[1];
++				printf("0x%02X, 0x%02X, 0x%02X", buf[0], buf[1], buf[2]);
++				if(buf[2] == ucsum && buf[1] == 0xA0){
++					printf("%s:i2c : Success\n", __func__);
++				}else{
++					retry++;
++					printf("%s:i2c : Fail, retry:%d\n", __func__, retry);
++					if(retry < 5)goto retry;
++				}
++			}else{
++				printf("%s:i2c : Fail, buf[0]:%d\n", __func__, buf[0]);
++			}
++		}
++	}
++}
++
++void mcu_count()
++{
++	unsigned char wbuf[6] = { 0 };
++	unsigned char buf[7] = { 0 };
++	unsigned char ucsum, retry = 0;
++	uint32_t MCUcount=0, count0, count1, count2, count3 ;
++	uint8_t mcu_count[4];
++	
++	if (!i2c_probe(0x0C)) {
++retry:
++		wbuf[0] = 0x95;
++		wbuf[1] = 0x92;
++		wbuf[2] = 0x03;
++		if (i2c_read_mcu(0x0C, wbuf, 3, buf, 7)) {
++			printf("%s:i2c_read:error\n", __func__);
++		}
++		else {
++			if(buf[0] == 7){
++				ucsum = buf[0] + buf[1] + buf[2] + buf[3] + buf[4] + buf[5];
++printf("0x%02X, 0x%02X, 0x%02X, 0x%02X, 0x%02X, 0x%02X, 0x%02X", buf[0], buf[1], buf[2], buf[3], buf[4], buf[5], buf[6]);
++				if(buf[6] == ucsum && buf[1] == 0xA2){
++					MCUcount = buf[2] + (buf[3] << 8) + (buf[4] << 16) + (buf[5] << 24);
++					printf("\n MCU_COUNT = %d \n",MCUcount);
++				}else{
++					retry++;
++					printf("%s:i2c : Fail, retry:%d\n", __func__, retry);
++//					if(retry < 5)goto retry;
++				}
++			}else{
++				printf("%s:i2c : Fail, buf[0]:%d\n", __func__, buf[0]);
++			}
++		}
++	}
++}
++
++void mcu_wdog_poweroff()
++{
++	unsigned char wbuf[6] = { 0 };
++	unsigned char buf[6] = { 0 };
++	unsigned char ucsum, retry = 0;
++	
++	if (!i2c_probe(0x0C)) {
++retry:
++		wbuf[0] = 0x8D;
++		wbuf[1] = 0x01;
++		wbuf[2] = 0x88;
++		wbuf[3] = 0x04;
++		if (i2c_read_mcu(0x0C, wbuf, 4, buf, 3)) {
++			printf("%s:i2c_read:error\n", __func__);
++		}
++		else {
++			if(buf[0] == 3){
++				ucsum = buf[0] + buf[1];
++				printf("0x%02X, 0x%02X, 0x%02X", buf[0], buf[1], buf[2]);
++				if(buf[2] == ucsum && buf[1] == 0xA0){
++					printf("%s:i2c : Success\n", __func__);
++				}else{
++					retry++;
++					printf("%s:i2c : Fail, retry:%d\n", __func__, retry);
++					if(retry < 5)goto retry;
++				}
++			}else{
++				printf("%s:i2c : Fail, buf[0]:%d\n", __func__, buf[0]);
++			}
++		}
++	}
++}
++#endif
++
+ void start_armboot (void)
+ {
+ 	init_fnc_t **init_fnc_ptr;
+@@ -475,10 +652,17 @@
+ 	board_late_init ();
+ #endif
+ 
++	puts ("\n---------------------mcu_wdog_disable---------\n");
++	mcu_wdog_disable();
++	puts ("----------------------------mcu_count---------\n");
++	mcu_count();
++	puts ("----------------------------mcu_reset---------\n");
++//	mcu_wdog_poweroff();
++	
+ #ifdef CONFIG_USB_BOOT_SCAN
+ 	usb_boot_scan() ;
+ #endif
+-
++	
+ #ifdef CONFIG_ANDROID_RECOVERY
+ 	check_recovery_mode();
+ #endif
+diff '--exclude=.*' -Naur u-boot/lib_arm/bootm.c u-boot-count/lib_arm/bootm.c
+--- u-boot/lib_arm/bootm.c	2017-03-27 17:41:39.397773387 +0800
++++ u-boot-count/lib_arm/bootm.c	2017-03-27 15:00:29.306059106 +0800
+@@ -59,6 +59,10 @@
+ static struct tag *params;
+ #endif /* CONFIG_SETUP_MEMORY_TAGS || CONFIG_CMDLINE_TAG || CONFIG_INITRD_TAG */
+ 
++#ifdef CONFIG_MCU_WDOG
++extern void mcu_wdog_kernel();
++#endif
++
+ int do_bootm_linux(int flag, int argc, char *argv[], bootm_headers_t *images)
+ {
+ 	bd_t	*bd = gd->bd;
+@@ -116,6 +120,10 @@
+ 	setup_end_tag (bd);
+ #endif
+ 
++#ifdef CONFIG_MCU_WDOG
++	mcu_wdog_kernel();	//modify watch dog timer.
++#endif
++
+ 	/* we assume that the kernel is in place */
+ 	printf ("\nStarting kernel ...\n\n");
+ 

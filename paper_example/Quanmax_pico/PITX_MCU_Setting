@@ -1,0 +1,22 @@
+PITX EFM PING 
+
+PIN	NAME			I/O  	function	
+------------------------------------------------------------------------
+PA0	MCU_PWR_ON		O 	power enable ping
+PC0	3V2_STB			I 	ACMP0-CH0(DC IN)
+PC1	PWRBTN			I 	power button
+PC14	ACMP1_CR2032		I 	ACMP1-CH6(Cell Battery)
+PE12	MCU_SDA			I/O	I2C
+PE13	MCU_SCL			I/O	I2C
+PB11	MCU_ON_OFF_REQ		O 	power sequence
+PD6	LED			O	指示燈
+PD7	PMIC_detect		I 	ADC0_CH7 (bADCVoltageGotFlag)
+PF0	SWCLK			I/O	MCU_IF
+PF1	SWDIO			I/O	MCU_IF
+PF2	POR				沒使用
+PC15	iMX6_INT			沒使用
+PB13	MCU_BOOT			沒使用
+PB14	RGMII_INT			沒使用
+
+
+
